@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+<LinearLayout
+    android:id="@+id/lv_beforecrop"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:elevation="6dp"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toTopOf="parent">
+
+    <!--app:frameColor="@color/colorPrimaryDark"
+        app:frameStrokeWeight="1dp"
+        app:guideColor="@color/orange"
+        app:guideShowMode="show_on_touch"
+        app:guideStrokeWeight="1dp"
+        app:handleColor="@color/orange"
+        app:handleShowMode="show_always"
+        app:handleSize="8dp"
+        app:minFrameSize="100dp"
+        app:overlayColor="@color/uncrop_color"
+        app:touchPadding="8dp"-->
+
+    <!--Button
+        android:id="@+id/tv_save_image"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="30dp"
+        android:layout_marginTop="50dp"
+        android:layout_marginRight="50dp"
+        android:backgroundTint="@color/blue"
+        android:paddingBottom="2dp"
+        android:text="Click Here to Select Image"
+        android:textColor="#fff"
+        android:visibility="visible" /-->
+
+    <com.example.wallpaperapp.CropImageView
+        android:id="@+id/cv4"
+        android:layout_width="wrap_content"
+        android:layout_height="400dp"
+        android:background="@color/black"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp" />
+
+    <Button
+        android:id="@+id/crop_image"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/cv4"
+        android:layout_marginLeft="30dp"
+        android:layout_marginTop="50dp"
+        android:layout_marginRight="50dp"
+        android:padding="20dp"
+        android:backgroundTint="#33B5E5"
+        android:text="Click Here to Select Image"
+        android:textColor="#000" />
+
+</LinearLayout>
+    <LinearLayout
+        android:id="@+id/lv_aftercrop"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:elevation="6dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/set_image"
+            android:src="@drawable/ic_image"
+            android:layout_width="400dp"
+            android:layout_height="400dp"/>
+
+        <Button
+            android:id="@+id/save_image"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/set_image"
+            android:layout_marginLeft="30dp"
+            android:layout_marginTop="50dp"
+            android:layout_marginRight="50dp"
+            android:text="Save Image"
+            android:padding="20dp"
+            android:backgroundTint="#33B5E5"
+            android:textColor="#000"/>
+
+
+    </LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
