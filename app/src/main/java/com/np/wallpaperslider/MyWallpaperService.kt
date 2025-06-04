@@ -470,7 +470,7 @@ class MyWallpaperService : WallpaperService() {
                     "Wallpaper slider not supported!",
                     Toast.LENGTH_SHORT
                 ).show()
-                TODO("VERSION.SDK_INT < UPSIDE_DOWN_CAKE")
+
 
             }
 
