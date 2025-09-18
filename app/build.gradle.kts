@@ -5,19 +5,20 @@ plugins {
 
 android {
     namespace = "com.np.wallpaperslider"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.np.wallpaperslider"
-        minSdk = 26
-        targetSdk = 34
-        versionCode = 12
-        versionName = "1.7"
+        minSdk = 35
+        targetSdk = 35
+        versionCode = 20
+        versionName = "1.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
+        vectorDrawables.useSupportLibrary = true
     }
 
     buildTypes {
@@ -38,6 +39,7 @@ android {
     }
     buildFeatures {
         compose = true
+        viewBinding = true
 
     }
     composeOptions {
@@ -69,9 +71,11 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.cardview:cardview:1.0.0")
     implementation("androidx.recyclerview:recyclerview:1.1.0")
+
     // For control over item selection of both touch and mouse driven selection
     implementation("androidx.recyclerview:recyclerview-selection:1.1.0")
     implementation("com.google.android.material:material:1.12.0")
+   // implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
@@ -85,4 +89,5 @@ dependencies {
     implementation("pub.devrel:easypermissions:3.0.0")
     // For developers using the Android Support Library
     implementation("pub.devrel:easypermissions:3.0.0")
+
 }
