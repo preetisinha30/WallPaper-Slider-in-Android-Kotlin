@@ -23,12 +23,26 @@
         android:layout_height="0dp"
         android:adjustViewBounds="true"
         android:scaleType="centerCrop"
+        android:contentDescription="Image to edit"
+        android:background="@color/purple_200"
         app:layout_constraintTop_toBottomOf="@id/xml_toolbar"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:contentDescription="Image to edit"
-        android:background="@color/purple_200" /> <!-- Added a temporary background for visibility if image fails to load -->
+        app:layout_constraintEnd_toEndOf="parent"/> <!-- Added a temporary background for visibility if image fails to load -->
+
+    <ImageView
+        android:id="@+id/view_category_indicator"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="4dp"
+        android:scaleType="centerInside"
+        android:padding="4dp"
+        android:background="@drawable/category_indicator_background"
+        android:contentDescription="Category indicator"
+        android:elevation="4dp"
+        app:layout_constraintTop_toTopOf="@id/view_image"
+        app:layout_constraintEnd_toEndOf="@id/view_image" />
 
     <!-- Button Container (Delete, Crop, Rotate) -->
     <!-- Positioned above 'after_rotate_container' and centered horizontally -->
@@ -99,7 +113,6 @@
         android:id="@+id/after_rotate_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="?attr/colorSurface"
         android:orientation="horizontal"
         android:gravity="center"
         android:padding="16dp"

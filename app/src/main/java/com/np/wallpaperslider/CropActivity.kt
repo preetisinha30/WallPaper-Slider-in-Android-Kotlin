@@ -14,6 +14,7 @@ import android.util.DisplayMetrics
 import android.util.Log
 import android.view.View
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -22,22 +23,29 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.launch
 import java.io.IOException
+import androidx.core.graphics.scale
+import androidx.core.net.toUri
+import com.bumptech.glide.Glide
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class CropActivity : ComponentActivity(), View.OnClickListener {
     private lateinit var origPic: CropImageView
     private lateinit var cropPic: MaterialButton
-    private lateinit var zoomin: MaterialButton
-    private lateinit var zoomout: MaterialButton
-    private lateinit var rotatePic: MaterialButton
-    private lateinit var undoIcon: MaterialButton
+    private lateinit var zoomin: FloatingActionButton
+    private lateinit var zoomout: FloatingActionButton
+    //private lateinit var rotatePic: FloatingActionButton
+    private lateinit var undoIcon: FloatingActionButton
     private lateinit var imagePic: ImageView
     private lateinit var savePic: MaterialButton
     private lateinit var cancelButton: MaterialButton
     private lateinit var cl_imageContainer: ConstraintLayout
     private lateinit var cl_buttonContainer: ConstraintLayout
-    private lateinit var cl_actionButtons: ConstraintLayout
-    private var imageindex: Int? = 0
-    private var imagesArray = arrayOf<String>()
+    private lateinit var cl_actionButtons: LinearLayout
+    private var imageindex: Long? = 0L
+    //private var imagesArray = arrayOf<String>()
+    var imagesList = ArrayList<ImageItem>()
     private val handler = Handler(Looper.getMainLooper())
     private val drawRunner = Runnable { drawImage() }
     private var useDiceOne = false
@@ -71,7 +79,7 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
         zoomout = findViewById(R.id.zoom_out)
         imagePic = findViewById(R.id.set_image)
         savePic = findViewById(R.id.save_image)
-        rotatePic = findViewById(R.id.rot_icon)
+        //rotatePic = findViewById(R.id.rot_icon)
         undoIcon = findViewById(R.id.undo_icon)
         cancelButton = findViewById(R.id.cancel_button)
         cl_imageContainer = findViewById(R.id.cl_imageContainer)
@@ -83,9 +91,13 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
         savePic.setOnClickListener(this)
         zoomin.setOnClickListener(this)
         zoomout.setOnClickListener(this)
-        rotatePic.setOnClickListener(this)
+        //rotatePic.setOnClickListener(this)
         undoIcon.setOnClickListener(this)
         cancelButton.setOnClickListener(this)
+        zoomin.tooltipText = "Zoom In"
+        zoomout.tooltipText = "Zoom Out"
+       // rotatePic.tooltipText = "Rotate"
+        undoIcon.tooltipText = "Undo"
 
         // Set maxHeight for cl_imageContainer dynamically
         val displayMetrics = DisplayMetrics()
@@ -100,10 +112,12 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
         Log.d(TAG, "Screen height: $screenHeight dp, Max image height: $maxImageHeight dp, Container maxHeight: $maxHeight px")
 
         // Load image array and index
-        imagesArray = loadArray("imagesPathList", applicationContext)
+        //imagesArray = loadArray("imagesPathList", applicationContext)
+        loadImageListFromPrefs()
         showBeforeCrop()
         val bundle = intent.extras
-        imageindex = bundle?.getString("imageindex")?.toIntOrNull() ?: 0
+        //imageindex = bundle?.getString("imageindex")?.toIntOrNull() ?: 0
+        imageindex = intent.getLongExtra("imageindex", 0L)
         frompage = bundle?.getString("frompage") ?: "none"
         origPic.setImageResource(android.R.color.transparent)
         handler.postDelayed(drawRunner, 3000)
@@ -122,11 +136,13 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
 
     private fun drawImage() {
         try {
-            val imageUri = Uri.parse(imagesArray.getOrNull(imageindex ?: return) ?: run {
+           /* val imageUri = (imagesArray.getOrNull(imageindex ?: return) ?: run {
                 Log.e(TAG, "Invalid image index: $imageindex")
                 showError("Failed to load image")
                 return
-            })
+            }).toUri()*/
+            val imageItem = imagesList.find { it.id == imageindex } ?: return
+            val imageUri = imageItem.imagePath.toUri()
 
             filename = imageUri.lastPathSegment?.takeIf { it.isNotBlank() } ?: "image_${System.currentTimeMillis()}"
             val displayMetrics = resources.displayMetrics
@@ -194,7 +210,8 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
                     } else {
                         targetHeight
                     }
-                    Bitmap.createScaledBitmap(bitmap, scaledWidth, scaledHeight, true)
+                    //Bitmap.createScaledBitmap(bitmap, scaledWidth, scaledHeight, true)
+                    bitmap.scale(scaledWidth, scaledHeight)
                 }
             }
         } catch (e: Exception) {
@@ -221,6 +238,7 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
         cl_imageContainer.findViewById<View>(R.id.set_image).visibility = View.GONE
         cl_buttonContainer.findViewById<View>(R.id.crop_image).visibility = View.VISIBLE
         cl_actionButtons.visibility = View.VISIBLE
+        cl_buttonContainer.findViewById<View>(R.id.cancel_button).visibility = View.GONE
         cl_buttonContainer.findViewById<View>(R.id.save_image).visibility = View.GONE
     }
 
@@ -229,6 +247,7 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
         cl_imageContainer.findViewById<View>(R.id.set_image).visibility = View.VISIBLE
         cl_buttonContainer.findViewById<View>(R.id.crop_image).visibility = View.GONE
         cl_actionButtons.visibility = View.GONE
+        cl_buttonContainer.findViewById<View>(R.id.cancel_button).visibility = View.VISIBLE
         cl_buttonContainer.findViewById<View>(R.id.save_image).visibility = View.VISIBLE
     }
 
@@ -256,7 +275,7 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
                     }
                 }
             }
-            rotatePic -> {
+            /*rotatePic -> {
                 Log.d(TAG, "Rotate button clicked")
                 lifecycleScope.launch {
                     try {
@@ -266,7 +285,7 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
                         Toast.makeText(this@CropActivity, "Rotation error", Toast.LENGTH_SHORT).show()
                     }
                 }
-            }
+            }*/
             cropPic -> {
                 Log.d(TAG, "Crop button clicked")
                 try {
@@ -285,10 +304,44 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
             }
             savePic -> {
                 Log.d(TAG, "Save button clicked")
-                val newImageUri: Uri? = origPic.saveCroppedImage(applicationContext, filename)
+               /* val oldUri = (imagesArray.getOrNull(imageindex ?: return) ?: run {
+                    Log.e(TAG, "Invalid image index: $imageindex")
+                    showError("Failed to load image")
+                    return
+                }).toUri()*/
+                val imageItem = imagesList.find { it.id == imageindex } ?: return
+                val oldUri = imageItem.imagePath.toUri()
+               /* val newImageUri: Uri? = origPic.saveCroppedImage(applicationContext, filename)
                 if (newImageUri != null) {
-                    imagesArray[imageindex!!] = newImageUri.toString()
+                    imagesList.add(imageindex, newImageUri.toString())
                     if (saveArray(imagesArray, "imagesPathList", applicationContext)) {
+                        val prefs = getSharedPreferences("wallpaperimages", Context.MODE_PRIVATE)
+                        val editor = prefs.edit()
+
+                        fun removeFromCategory(listName: String) {
+                            val size = prefs.getInt("${listName}_size", 0)
+                            val newList = mutableListOf<String>()
+                            for (i in 0 until size) {
+                                val path = prefs.getString("${listName}_$i", null)
+                                if (path != null && path != oldUri.toString()) newList.add(path)
+                            }
+                            editor.putInt("${listName}_size", newList.size)
+                            newList.forEachIndexed { i, v -> editor.putString("${listName}_$i", v) }
+                        }
+
+                        removeFromCategory("homeImages")
+                        removeFromCategory("lockImages")
+                        removeFromCategory("bothImages")
+                        removeFromCategory("clearImages")
+
+                        editor.apply()
+
+                        // Delete old file from MediaStore
+                        try {
+                            applicationContext.contentResolver.delete(oldUri, null, null)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
                         val intent = Intent(this, RGrid::class.java)
                         intent.putExtra("frompage", "none")
                         startActivity(intent)
@@ -296,6 +349,30 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
                     }
                 } else {
                     Toast.makeText(this, "Failed to save image", Toast.LENGTH_SHORT).show()
+                }*/
+                val success = origPic.saveCroppedImageNew(applicationContext, oldUri)
+
+                if (success) {
+                    bustGlideCache(oldUri.toString())
+
+                    Glide.get(applicationContext).clearMemory()
+
+                    // 2. Clear GLIDE DISK CACHE (MUST be on Background Thread)
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        // Note: This clears the ENTIRE disk cache, which is the most aggressive fix.
+                        // If you can get a File object from the URI, clearing only that file is better.
+                        Glide.get(applicationContext).clearDiskCache()
+
+                        // 3. Navigate back to RGrid after cache is cleared (optional but safer)
+                        withContext(Dispatchers.Main) {
+                            val intent = Intent(applicationContext, RGrid::class.java)
+                            intent.putExtra("frompage", "none")
+                            startActivity(intent)
+                            finish()
+                        }
+                    }
+                } else {
+                    Toast.makeText(this, "Failed to save rotation", Toast.LENGTH_SHORT).show()
                 }
             }
             undoIcon -> {
@@ -323,20 +400,52 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
             }
             cancelButton -> {
                 Log.d(TAG, "Cancel button clicked")
-                bmp?.let { origPic.setImageBitmap(it) }
-                showBeforeCrop()
+                bmp?.let { bitmap ->
+                    with(origPic) {
+                        resetMatrix()
+                        // Remove setScale(1.0f) to rely on initLayout
+                        setRotation(0f)
+                        setImageBitmap(bitmap)
+                        setCropMode(CropImageView.CropMode.RATIO_FIT_IMAGE)
+                        setCropEnabled(true)
+                    }
+                    showBeforeCrop()
+                    Log.d(TAG, "Transformations reset")
+                } ?: run {
+                    Log.e(TAG, "Original bitmap is null")
+                    Toast.makeText(this@CropActivity, "No image to reset", Toast.LENGTH_SHORT).show()
+                }
             }
         }
+    }
+
+    private fun bustGlideCache(uriString: String) {
+        val prefs = getSharedPreferences("glide_cache_busters", Context.MODE_PRIVATE)
+        val currentBuster = prefs.getInt(uriString, 0)
+        prefs.edit().putInt(uriString, currentBuster + 1).apply()
+        Log.d(TAG, "Busted cache for $uriString. New buster: ${currentBuster + 1}")
     }
 
     private fun saveArray(array: Array<String>, arrayName: String, context: Context): Boolean {
         val prefs = getSharedPreferences("wallpaperimages", Context.MODE_PRIVATE)
         val editor = prefs.edit()
-        editor.clear().apply()
+        //editor.clear().apply()
         editor.putInt("${arrayName}_size", array.size)
         for (i in array.indices) {
             editor.putString("${arrayName}_$i", array[i])
         }
         return editor.commit()
+    }
+    private fun loadImageListFromPrefs() {
+        val prefs = getSharedPreferences("wallpaperimages", Context.MODE_PRIVATE)
+        val size = prefs.getInt("imagesPathList_size", 0)
+
+        imagesList.clear()
+        for (i in 0 until size) {
+            val path = prefs.getString("imagesPathList_$i", null)
+            if (path != null) {
+                imagesList.add(ImageItem.fromPath(path, ""))
+            }
+        }
     }
 }

@@ -2,17 +2,24 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
+        android:id="@+id/action_select_multiple"
+        android:enabled="true"
+        android:icon="@drawable/outline_select_check_box_24"
+        android:title="Select"
+        android:contentDescription="Select multiple"
+        app:showAsAction="always|withText" />
+    <!--<item
         android:id="@+id/setduration"
         android:enabled="true"
         android:icon="@drawable/baseline_access_time_24"
         android:title="Duration"
         android:contentDescription="Set wallpaper duration"
-        app:showAsAction="always|withText" />
+        app:showAsAction="always|withText" />-->
     <item
         android:id="@+id/gotowallpaper"
         android:enabled="true"
         android:icon="@drawable/next"
-        android:title="Next"
+        android:title="Apply"
         android:contentDescription="Go to Wallpaper Slider"
         app:showAsAction="always|withText" />
     <item

@@ -26,8 +26,7 @@
         android:requestLegacyExternalStorage="true"
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
-        android:theme="@style/Theme.App.Starting"
-        tools:targetApi="31">
+        android:theme="@style/Theme.App.Starting">
         <receiver
             android:name=".WallpaperChangeReceiver"
             android:enabled="true"
@@ -52,11 +51,10 @@
             android:exported="true"></service>
         -->
         <activity
-            android:name=".MainActivity"
+            android:name=".OnboardingActivity"
             android:exported="true"
             android:label="Wallpaper Slider"
-            android:launchMode="singleTask"
-            android:theme="@style/Theme.App.Starting">
+            android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -64,12 +62,20 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:label="Wallpaper Slider"
+            android:theme="@style/Theme.WallPaperSlider">
+        </activity>
+
         <service
             android:name=".MyWallpaperService"
             android:enabled="true"
             android:exported="true"
             android:label="Wallpaper Preview"
-            android:permission="android.permission.BIND_WALLPAPER">
+            android:permission="android.permission.BIND_WALLPAPER"
+            android:theme="@style/Theme.WallPaperSlider">
             <intent-filter>
                 <action android:name="android.service.wallpaper.WallpaperService" />
             </intent-filter>
@@ -87,17 +93,17 @@
 
         <activity
             android:name=".CropActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="Crop Image"
             android:theme="@style/Theme.WallPaperSlider"/>
         <activity
             android:name=".RGrid"
-            android:exported="true"
+            android:exported="false"
             android:label="My Images"
             android:theme="@style/Theme.WallPaperSlider" />
         <activity
             android:name=".RViewActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="My Image"
             android:theme="@style/Theme.WallPaperSlider"/>
         <activity android:name=".WallpaperPreviewActivity"

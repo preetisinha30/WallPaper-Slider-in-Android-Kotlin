@@ -11,8 +11,8 @@ android {
         applicationId = "com.np.wallpaperslider"
         minSdk = 35
         targetSdk = 35
-        versionCode = 20
-        versionName = "1.8"
+        versionCode = 23
+        versionName = "1.11"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -75,7 +75,8 @@ dependencies {
     // For control over item selection of both touch and mouse driven selection
     implementation("androidx.recyclerview:recyclerview-selection:1.1.0")
     implementation("com.google.android.material:material:1.12.0")
-   // implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("androidx.viewpager2:viewpager2:1.1.0")
+    // implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
@@ -89,5 +90,7 @@ dependencies {
     implementation("pub.devrel:easypermissions:3.0.0")
     // For developers using the Android Support Library
     implementation("pub.devrel:easypermissions:3.0.0")
-
+    implementation("com.github.bumptech.glide:glide:4.16.0")
+    annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
+    implementation("com.google.code.gson:gson:2.11.0")
 }

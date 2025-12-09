@@ -54,8 +54,7 @@ class CropImageView @JvmOverloads constructor(
 
     // Zoom variables
     private val scaleGestureDetector: ScaleGestureDetector
-    private val MIN_ZOOM = 0.5f
-    private val MAX_ZOOM = 3.0f
+
     private val INITIAL_SCALE_FACTOR = 1.0f // Slight zoom for better initial appearance
 
     // Customizable attributes
@@ -86,12 +85,17 @@ class CropImageView @JvmOverloads constructor(
     private val screenWidth: Float
     private val screenHeight: Float
 
+    val mDensity = density
+
+
     init {
         val mDensity = density
         mHandleSize = (mDensity * HANDLE_SIZE_IN_DP).toInt()
         mMinFrameSize = mDensity * MIN_FRAME_SIZE_IN_DP
         mFrameStrokeWeight = mDensity * FRAME_STROKE_WEIGHT_IN_DP
         mGuideStrokeWeight = mDensity * GUIDE_STROKE_WEIGHT_IN_DP
+        mTouchPadding = (mDensity * 8).toInt()
+        mMinFrameSize = MIN_FRAME_SIZE_IN_DP * mDensity
 
         // Initialize mPaintFrame
         mPaintFrame.apply {
@@ -114,11 +118,30 @@ class CropImageView @JvmOverloads constructor(
             override fun onScale(detector: ScaleGestureDetector): Boolean {
                 Log.d(TAG, "ScaleGestureDetector: scaleFactor=${detector.scaleFactor}, focusX=${detector.focusX}, focusY=${detector.focusY}")
                 val scaleFactor = detector.scaleFactor
-                val newScale = mScale * scaleFactor
-                if (newScale in MIN_ZOOM..MAX_ZOOM) {
+                var newScale = mScale * scaleFactor
+               /* if (newScale in MIN_ZOOM..MAX_ZOOM) {
                     mScale = newScale
                     mCenter.set(detector.focusX, detector.focusY)
                     checkScaleBounds()
+                    invalidate()
+                }*/
+                // Set MIN_ZOOM to the initial scale to prevent zooming out too far
+                if (!mIsInitialized) return false
+                val initialScale = calculateInitialScale(mViewWidth, mViewHeight, mImgWidth, mImgHeight)
+                val effectiveMinZoom = max(MIN_ZOOM, initialScale)
+
+                if (newScale < effectiveMinZoom) {
+                    newScale = effectiveMinZoom
+                } else if (newScale > MAX_ZOOM) {
+                    newScale = MAX_ZOOM
+                }
+
+                if (newScale != mScale) {
+                    mScale = newScale
+                    // Panning focus is the point of pinch
+                    mCenter.x = detector.focusX
+                    mCenter.y = detector.focusY
+                    setMatrix() // Apply new scale/center immediately
                     invalidate()
                 }
                 return true
@@ -230,6 +253,21 @@ class CropImageView @JvmOverloads constructor(
                 canvas.drawBitmap(it, mMatrix, mPaintBitmap)
                 drawEditFrame(canvas)
             }
+           /* drawable?.let {
+                it.draw(canvas) // Use drawable.draw(canvas) instead of bitmap
+                drawEditFrame(canvas)
+            }*/
+        }
+    }
+
+    private fun calculateInitialScale(viewW: Int, viewH: Int, imgW: Float, imgH: Float): Float {
+        if (imgW <= 0f || imgH <= 0f) return 1.0f
+        val viewRatio = viewW.toFloat() / viewH.toFloat()
+        val imgRatio = imgW / imgH
+        return if (imgRatio > viewRatio) {
+            viewW.toFloat() / imgW
+        } else {
+            viewH.toFloat() / imgH
         }
     }
 
@@ -289,10 +327,14 @@ class CropImageView @JvmOverloads constructor(
                 color = mGuideColor
                 strokeWidth = mGuideStrokeWeight
             }
-            val h1 = mFrameRect!!.left + (mFrameRect!!.right - mFrameRect!!.left) / 4.0f
+            /*val h1 = mFrameRect!!.left + (mFrameRect!!.right - mFrameRect!!.left) / 4.0f
             val h2 = mFrameRect!!.right - (mFrameRect!!.right - mFrameRect!!.left) / 4.0f
             val v1 = mFrameRect!!.top + (mFrameRect!!.bottom - mFrameRect!!.top) / 4.0f
-            val v2 = mFrameRect!!.bottom - (mFrameRect!!.bottom - mFrameRect!!.top) / 4.0f
+            val v2 = mFrameRect!!.bottom - (mFrameRect!!.bottom - mFrameRect!!.top) / 4.0f*/
+            val h1 = mFrameRect!!.left + mFrameRect!!.width() / 3.0f
+            val h2 = mFrameRect!!.right - mFrameRect!!.width() / 3.0f
+            val v1 = mFrameRect!!.top + mFrameRect!!.height() / 3.0f
+            val v2 = mFrameRect!!.bottom - mFrameRect!!.height() / 3.0f
             canvas.drawLine(h1, mFrameRect!!.top, h1, mFrameRect!!.bottom, mPaintFrame)
             canvas.drawLine(h2, mFrameRect!!.top, h2, mFrameRect!!.bottom, mPaintFrame)
             canvas.drawLine(mFrameRect!!.left, v1, mFrameRect!!.right, v1, mPaintFrame)
@@ -307,13 +349,14 @@ class CropImageView @JvmOverloads constructor(
                 alpha = 255
             }
             // Corner handles
-            canvas.drawCircle(mFrameRect!!.left, mFrameRect!!.top, mHandleSize.toFloat(), mPaintFrame)
-            canvas.drawCircle(mFrameRect!!.right, mFrameRect!!.top, mHandleSize.toFloat(), mPaintFrame)
-            canvas.drawCircle(mFrameRect!!.left, mFrameRect!!.bottom, mHandleSize.toFloat(), mPaintFrame)
-            canvas.drawCircle(mFrameRect!!.right, mFrameRect!!.bottom, mHandleSize.toFloat(), mPaintFrame)
+            val handleSizeFloat = mHandleSize.toFloat()
+            canvas.drawCircle(mFrameRect!!.left, mFrameRect!!.top, handleSizeFloat, mPaintFrame)
+            canvas.drawCircle(mFrameRect!!.right, mFrameRect!!.top, handleSizeFloat, mPaintFrame)
+            canvas.drawCircle(mFrameRect!!.left, mFrameRect!!.bottom, handleSizeFloat, mPaintFrame)
+            canvas.drawCircle(mFrameRect!!.right, mFrameRect!!.bottom, handleSizeFloat, mPaintFrame)
         }
     }
-
+/*
     private fun setMatrix() {
         if (mImgWidth <= 0 || mImgHeight <= 0 || mScale <= 0) {
             Log.w(TAG, "Invalid matrix parameters: mImgWidth=$mImgWidth, mImgHeight=$mImgHeight, mScale=$mScale")
@@ -323,10 +366,76 @@ class CropImageView @JvmOverloads constructor(
         mMatrix.setTranslate(mCenter.x - mImgWidth * 0.5f, mCenter.y - mImgHeight * 0.5f)
         mMatrix.postScale(mScale, mScale, mCenter.x, mCenter.y)
         mMatrix.postRotate(mAngle, mCenter.x, mCenter.y)
+
         updateImageRect()
         checkScaleBounds()
     }
+*/
+private fun setMatrix() {
+    if (mImgWidth <= 0 || mImgHeight <= 0) return
 
+    // --- Core Matrix Logic (Applies Scale/Rotation/Translation) ---
+    /*fun applyTransformations(center: PointF) {
+        mMatrix.reset()
+
+        // 1. Scale and Rotate: Pivot around the image's original center (mImgWidth/2, mImgHeight/2)
+        // This is generally more stable as the pivot point remains constant relative to the drawable.
+        mMatrix.postScale(mScale, mScale, mImgWidth * 0.5f, mImgHeight * 0.5f)
+        mMatrix.postRotate(mAngle, mImgWidth * 0.5f, mImgHeight * 0.5f)
+
+        // 2. Translate: Move the center of the transformed image
+        // (which is now at mImgWidth/2, mImgHeight/2 in matrix space) to the desired view center (mCenter).
+
+        // Calculate the required translation to move the scaled center to 'center'
+        val scaledCenterX = mImgWidth * mScale * 0.5f
+        val scaledCenterY = mImgHeight * mScale * 0.5f
+
+        // The required translation distance is the difference between the desired view center (mCenter)
+        // and the current scaled image center (relative to the drawable origin, which is 0,0)
+        val dx = center.x - scaledCenterX
+        val dy = center.y - scaledCenterY
+
+        mMatrix.postTranslate(dx, dy)
+    }*/
+    fun applyTransformations(center: PointF) {
+        mMatrix.reset()
+
+        // 1. Scale and Rotate: Pivot around the image's original center (mImgWidth/2, mImgHeight/2)
+        val pivotX = mImgWidth * 0.5f
+        val pivotY = mImgHeight * 0.5f
+        mMatrix.postScale(mScale, mScale, pivotX, pivotY)
+        mMatrix.postRotate(mAngle, pivotX, pivotY)
+
+        // 2. Translate: Move the center of the transformed image
+        val currentCenter = floatArrayOf(pivotX, pivotY)
+        mMatrix.mapPoints(currentCenter)
+
+        val dx = center.x - currentCenter[0]
+        val dy = center.y - currentCenter[1]
+
+        mMatrix.postTranslate(dx, dy)
+    }
+
+    // --- Pass 1: Apply current transformation for bounds check ---
+    applyTransformations(mCenter)
+    imageMatrix = mMatrix
+
+    updateImageRect()
+    checkPanBounds() // This checks the bounds based on mImageRect and clamps mCenter
+
+    // --- Pass 2: Re-apply transformation with potentially clamped mCenter ---
+    // This ensures the next draw cycle uses the correct, constrained position.
+    applyTransformations(mCenter)
+    imageMatrix = mMatrix
+
+    // Update the frame based on the final, corrected image position
+    updateCropFrame()
+}
+    private fun updateCropFrame() {
+        // After pan/zoom, ensure the frame is still constrained to the new image boundaries
+        checkScaleBounds()
+        checkMoveBounds()
+    }
     private fun updateImageRect() {
         if (mImgWidth <= 0 || mImgHeight <= 0) return
         val points = floatArrayOf(
@@ -353,7 +462,7 @@ class CropImageView @JvmOverloads constructor(
         }
 
         // Use device screen aspect ratio for wallpaper preview
-        val displayMetrics = context.resources.displayMetrics
+        /*val displayMetrics = context.resources.displayMetrics
         val screenAspect = displayMetrics.widthPixels.toFloat() / displayMetrics.heightPixels
         val imageAspect = mImgWidth / mImgHeight
 
@@ -363,11 +472,26 @@ class CropImageView @JvmOverloads constructor(
         } else {
             displayMetrics.widthPixels.toFloat() / mImgWidth
         }
-        mScale = mScale.coerceIn(MIN_ZOOM, MAX_ZOOM)
+        mScale = mScale.coerceIn(MIN_ZOOM, MAX_ZOOM)*/
+        mScale = 1.0f
+
         mCenter.set(paddingLeft + viewW * 0.5f, paddingTop + viewH * 0.5f)
+//new addition
+        // Ensure image is fully visible initially (Fit Center logic)
+        val viewRatio = viewW.toFloat() / viewH.toFloat()
+        val imgRatio = mImgWidth / mImgHeight
+
+        if (imgRatio > viewRatio) {
+            // Image is wider, scale based on width
+            mScale = viewW.toFloat() / mImgWidth
+        } else {
+            // Image is taller, scale based on height
+            mScale = viewH.toFloat() / mImgHeight
+        }
+        //till here
         initCropFrame()
         mIsInitialized = true
-        Log.d(TAG, "initLayout: scale=$mScale, centerX=${mCenter.x}, centerY=${mCenter.y}, imageAspect=$imageAspect, screenAspect=$screenAspect")
+        Log.d(TAG, "initLayout: scale=$mScale, centerX=${mCenter.x}, centerY=${mCenter.y}")
     }
 
     private fun initCropFrame() {
@@ -376,14 +500,50 @@ class CropImageView @JvmOverloads constructor(
             Log.e(TAG, "Cannot init crop frame: mImgWidth=$mImgWidth, mImgHeight=$mImgHeight, mImageRect=$mImageRect")
             return
         }
-
+/*
         // Initialize crop frame to match mImageRect
         mFrameRect = RectF(mImageRect!!.left, mImageRect!!.top, mImageRect!!.right, mImageRect!!.bottom)
         checkScaleBounds() // Adjust to maintain screen aspect ratio
-        mHandleSize = (min(mViewWidth, mViewHeight) * 0.05f).toInt()
-        mTouchPadding = (min(mViewWidth, mViewHeight) * 0.02f).toInt()
-        mMinFrameSize = min(mViewWidth, mViewHeight) * 0.1f
+        //mHandleSize = (min(mViewWidth, mViewHeight) * 0.05f).toInt()
+        //mTouchPadding = (min(mViewWidth, mViewHeight) * 0.02f).toInt()
+        //mMinFrameSize = mDensity * MIN_FRAME_SIZE_IN_DP
+        //mMinFrameSize = min(mViewWidth, mViewHeight) * 0.1f
+        val minViewDimension = min(mViewWidth, mViewWidth).toFloat()
+        mHandleSize = (minViewDimension * 0.05f).toInt().coerceAtLeast(30) // Ensure handles are touchable
+
+        mTouchPadding = (minViewDimension * 0.02f).toInt().coerceAtLeast(15)
+        mMinFrameSize = max(
+            minViewDimension * MIN_FRAME_SIZE_PERCENTAGE,
+            MIN_FRAME_SIZE_IN_DP * mDensity // 60dp minimum for easy touching/visual clarity
+        )
         Log.d(TAG, "initCropFrame: frameRect=[left=${mFrameRect?.left}, top=${mFrameRect?.top}, right=${mFrameRect?.right}, bottom=${mFrameRect?.bottom}]")
+        */
+        // Use the 80% scale to set the initial frame size
+        val imgW = mImageRect!!.width()
+        val imgH = mImageRect!!.height()
+
+        var frameW = imgW * INITIAL_FRAME_SCALE
+        var frameH = imgH * INITIAL_FRAME_SCALE
+
+        // Adjust for aspect ratio if not RATIO_FREE
+        if (mCropMode != CropMode.RATIO_FREE) {
+            if (frameW / frameH > aspectRatio) {
+                // Frame is too wide, constrain by height
+                frameW = frameH * aspectRatio
+            } else {
+                // Frame is too tall, constrain by width
+                frameH = frameW / aspectRatio
+            }
+        }
+        val cx = mImageRect!!.centerX()
+        val cy = mImageRect!!.centerY()
+
+        // Set the initial frame to 80% of the image, centered
+        mFrameRect = RectF(cx - frameW / 2, cy - frameH / 2, cx + frameW / 2, cy + frameH / 2)
+
+        // Ensure all subsequent handle movements respect the small mMinFrameSize
+        // checkScaleBounds() will now only enforce the *small* minimum size.
+        checkScaleBounds()
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -422,6 +582,14 @@ class CropImageView @JvmOverloads constructor(
         mLastY = e.y
         checkTouchArea(e.x, e.y)
         Log.d(TAG, "Touch down: x=${e.x}, y=${e.y}, touchArea=$mTouchArea")
+        //new addition
+        /*if (mHandleShowMode == ShowMode.SHOW_ON_TOUCH && mTouchArea != TouchArea.OUT_OF_BOUNDS) {
+            mShowHandle = true
+        }
+        if (mGuideShowMode == ShowMode.SHOW_ON_TOUCH && (mTouchArea == TouchArea.CENTER || mTouchArea.name.startsWith("TouchArea.R"))) {
+            mShowGuide = true
+        }*/
+        //till here
         invalidate()
     }
 
@@ -456,33 +624,33 @@ class CropImageView @JvmOverloads constructor(
         // Check corners (higher priority)
         if (isInsideCornerLeftTop(x, y)) {
             mTouchArea = TouchArea.LEFT_TOP
-            if (mHandleShowMode == ShowMode.SHOW_ON_TOUCH) mShowHandle = true
-            if (mGuideShowMode == ShowMode.SHOW_ON_TOUCH) mShowGuide = true
+           // if (mHandleShowMode == ShowMode.SHOW_ON_TOUCH) mShowHandle = true
+           // if (mGuideShowMode == ShowMode.SHOW_ON_TOUCH) mShowGuide = true
             return
         }
         if (isInsideCornerRightTop(x, y)) {
             mTouchArea = TouchArea.RIGHT_TOP
-            if (mHandleShowMode == ShowMode.SHOW_ON_TOUCH) mShowHandle = true
-            if (mGuideShowMode == ShowMode.SHOW_ON_TOUCH) mShowGuide = true
+           // if (mHandleShowMode == ShowMode.SHOW_ON_TOUCH) mShowHandle = true
+           // if (mGuideShowMode == ShowMode.SHOW_ON_TOUCH) mShowGuide = true
             return
         }
         if (isInsideCornerLeftBottom(x, y)) {
             mTouchArea = TouchArea.LEFT_BOTTOM
-            if (mHandleShowMode == ShowMode.SHOW_ON_TOUCH) mShowHandle = true
-            if (mGuideShowMode == ShowMode.SHOW_ON_TOUCH) mShowGuide = true
+           // if (mHandleShowMode == ShowMode.SHOW_ON_TOUCH) mShowHandle = true
+           // if (mGuideShowMode == ShowMode.SHOW_ON_TOUCH) mShowGuide = true
             return
         }
         if (isInsideCornerRightBottom(x, y)) {
             mTouchArea = TouchArea.RIGHT_BOTTOM
-            if (mHandleShowMode == ShowMode.SHOW_ON_TOUCH) mShowHandle = true
-            if (mGuideShowMode == ShowMode.SHOW_ON_TOUCH) mShowGuide = true
+          //  if (mHandleShowMode == ShowMode.SHOW_ON_TOUCH) mShowHandle = true
+          //  if (mGuideShowMode == ShowMode.SHOW_ON_TOUCH) mShowGuide = true
             return
         }
 
         // Check if inside frame for moving
         if (isInsideFrame(x, y)) {
             mTouchArea = TouchArea.CENTER
-            if (mGuideShowMode == ShowMode.SHOW_ON_TOUCH) mShowGuide = true
+          //  if (mGuideShowMode == ShowMode.SHOW_ON_TOUCH) mShowGuide = true
             return
         }
 
@@ -530,7 +698,7 @@ class CropImageView @JvmOverloads constructor(
     }
 
     private fun checkPanBounds() {
-        if (mImageRect == null) return
+        if (mImageRect == null || mFrameRect == null) return
         val viewLeft = paddingLeft.toFloat()
         val viewRight = mViewWidth.toFloat() - paddingRight
         val viewTop = paddingTop.toFloat()
@@ -539,7 +707,7 @@ class CropImageView @JvmOverloads constructor(
         val viewHeight = viewBottom - viewTop
 
         // Ensure mImageRect stays within view bounds
-        val imageWidth = mImageRect!!.width()
+        /*val imageWidth = mImageRect!!.width()
         val imageHeight = mImageRect!!.height()
         val minX = if (imageWidth > viewWidth) viewRight - imageWidth else viewLeft
         val maxX = if (imageWidth > viewWidth) viewLeft + imageWidth else viewRight
@@ -551,8 +719,47 @@ class CropImageView @JvmOverloads constructor(
 
         mCenter.x = mCenter.x.coerceIn(minX, maxX)
         mCenter.y = mCenter.y.coerceIn(minY, maxY)
+        */
+        // Horizontal Bounds
+        val minTranslationX = viewRight - mImageRect!!.right
+        val maxTranslationX = viewLeft - mImageRect!!.left
 
-        setMatrix()
+        // Vertical Bounds
+        val minTranslationY = viewBottom - mImageRect!!.bottom
+        val maxTranslationY = viewTop - mImageRect!!.top
+
+        // We only need to check bounds if the image is larger than the viewable area (which it should be after initLayout)
+        if (mImageRect!!.width() > viewRight - viewLeft) {
+            // Clamp the center.x based on the image's current bounds and desired view bounds
+           // val currentTranslationX = mCenter.x - (mImgWidth * 0.5f * mScale)
+
+            // This translation should be between the min and max required to cover the screen.
+           // mCenter.x = mCenter.x.coerceIn(mCenter.x + minTranslationX, mCenter.x + maxTranslationX)
+            // Min X: When image right edge is exactly at view right edge.
+            val minX = viewRight - (mImageRect!!.right - mCenter.x)
+            // Max X: When image left edge is exactly at view left edge.
+            val maxX = viewLeft + (mCenter.x - mImageRect!!.left)
+
+            mCenter.x = mCenter.x.coerceIn(minX, maxX)
+        }else {
+            // If image is smaller than view, center it and prevent panning.
+            mCenter.x = viewLeft + (viewRight - viewLeft) / 2
+        }
+
+        if (mImageRect!!.height() > viewBottom - viewTop) {
+           // mCenter.y = mCenter.y.coerceIn(mCenter.y + minTranslationY, mCenter.y + maxTranslationY)
+            // Min Y: When image bottom edge is exactly at view bottom edge.
+            val minY = viewBottom - (mImageRect!!.bottom - mCenter.y)
+            // Max Y: When image top edge is exactly at view top edge.
+            val maxY = viewTop + (mCenter.y - mImageRect!!.top)
+
+            mCenter.y = mCenter.y.coerceIn(minY, maxY)
+        }
+        else {
+            // If image is smaller than view, center it and prevent panning.
+            mCenter.y = viewTop + (viewBottom - viewTop) / 2
+        }
+        //setMatrix()
     }
 
     private fun moveHandleLT(diffX: Float, diffY: Float) {
@@ -562,7 +769,7 @@ class CropImageView @JvmOverloads constructor(
                     frame.left = max(image.left, min(frame.left + diffX, frame.right - mMinFrameSize))
                     frame.top = max(image.top, min(frame.top + diffY, frame.bottom - mMinFrameSize))
                 } else {
-                    val dx = diffX
+                /*   val dx = diffX
                     val dy = dx * ratioY / ratioX
                     frame.left = max(image.left, min(frame.left + dx, frame.right - mMinFrameSize))
                     frame.top = max(image.top, min(frame.top + dy, frame.bottom - mMinFrameSize))
@@ -573,6 +780,34 @@ class CropImageView @JvmOverloads constructor(
                     if (frame.height() < mMinFrameSize) {
                         frame.top = frame.bottom - mMinFrameSize
                         frame.left = frame.right - (mMinFrameSize * ratioX / ratioY)
+                    }
+                */
+                    // Ratio constrained mode
+                    val currentWidth = frame.width()
+                    val currentHeight = frame.height()
+                    val targetDelta = if (abs(diffX) > abs(diffY)) diffX else diffY
+
+                    // New Left boundary: must decrease when moving left (neg targetDelta)
+                    val newLeft = frame.left + targetDelta
+                    // New Top boundary: must decrease when moving up (neg targetDelta)
+                    val newTop = frame.top + targetDelta / aspectRatio
+
+                    // Calculate the resulting width/height if we constrain by the bounds hit first
+                    var constrainedLeft = max(image.left, min(newLeft, frame.right - mMinFrameSize))
+                    var constrainedTop = max(image.top, min(newTop, frame.bottom - mMinFrameSize))
+
+                    // Calculate which boundary was hit (X or Y)
+                    val newWidthX = frame.right - constrainedLeft
+                    val newHeightY = frame.bottom - constrainedTop
+
+                    if (newWidthX / aspectRatio > newHeightY) {
+                        // Y is the limiting factor (new height is smaller than required)
+                        frame.top = constrainedTop
+                        frame.left = frame.right - newHeightY * aspectRatio
+                    } else {
+                        // X is the limiting factor
+                        frame.left = constrainedLeft
+                        frame.top = frame.bottom - newWidthX / aspectRatio
                     }
                 }
                 checkScaleBounds()
@@ -587,7 +822,7 @@ class CropImageView @JvmOverloads constructor(
                     frame.right = max(frame.left + mMinFrameSize, min(frame.right + diffX, image.right))
                     frame.top = max(image.top, min(frame.top + diffY, frame.bottom - mMinFrameSize))
                 } else {
-                    val dx = diffX
+                  /*  val dx = diffX
                     val dy = dx * ratioY / ratioX
                     frame.right = max(frame.left + mMinFrameSize, min(frame.right + dx, image.right))
                     frame.top = max(image.top, min(frame.top + dy, frame.bottom - mMinFrameSize))
@@ -598,6 +833,29 @@ class CropImageView @JvmOverloads constructor(
                     if (frame.height() < mMinFrameSize) {
                         frame.top = frame.bottom - mMinFrameSize
                         frame.right = frame.left + (mMinFrameSize * ratioX / ratioY)
+                    }*/
+                    val targetDelta = if (abs(diffX) > abs(diffY)) diffX else diffY
+
+                    // X: Right moves with diffX
+                    val newRight = frame.right + targetDelta
+                    // Y: Top moves OPPOSITE to diffX for ratio. A positive dx (drag right) means UP (negative y change).
+                    val ySign = if (targetDelta > 0) -1.0f else 1.0f
+                    val newTop = frame.top + (targetDelta / aspectRatio) * ySign
+
+                    var constrainedRight = max(frame.left + mMinFrameSize, min(newRight, image.right))
+                    var constrainedTop = max(image.top, min(newTop, frame.bottom - mMinFrameSize))
+
+                    val newWidthX = constrainedRight - frame.left
+                    val newHeightY = frame.bottom - constrainedTop
+
+                    if (newWidthX / aspectRatio > newHeightY) {
+                        // Y is the limiting factor (new height is smaller than required)
+                        frame.top = constrainedTop
+                        frame.right = frame.left + newHeightY * aspectRatio
+                    } else {
+                        // X is the limiting factor
+                        frame.right = constrainedRight
+                        frame.top = frame.bottom - newWidthX / aspectRatio
                     }
                 }
                 checkScaleBounds()
@@ -612,7 +870,7 @@ class CropImageView @JvmOverloads constructor(
                     frame.left = max(image.left, min(frame.left + diffX, frame.right - mMinFrameSize))
                     frame.bottom = max(frame.top + mMinFrameSize, min(frame.bottom + diffY, image.bottom))
                 } else {
-                    val dx = diffX
+                 /*   val dx = diffX
                     val dy = dx * ratioY / ratioX
                     frame.left = max(image.left, min(frame.left + dx, frame.right - mMinFrameSize))
                     frame.bottom = max(frame.top + mMinFrameSize, min(frame.bottom + dy, image.bottom))
@@ -623,6 +881,30 @@ class CropImageView @JvmOverloads constructor(
                     if (frame.height() < mMinFrameSize) {
                         frame.bottom = frame.top + mMinFrameSize
                         frame.left = frame.right - (mMinFrameSize * ratioX / ratioY)
+                    }*/
+                    // --- FIX: Ratio constrained mode for Bottom-Left (Left decreases, Bottom increases) ---
+                    val targetDelta = if (abs(diffX) > abs(diffY)) diffX else diffY
+
+                    // X: Left moves with diffX
+                    val newLeft = frame.left + targetDelta
+                    // Y: Bottom moves OPPOSITE to diffX for ratio. A positive dx (drag right) means DOWN (positive y change).
+                    val ySign = if (targetDelta > 0) -1.0f else 1.0f
+                    val newBottom = frame.bottom - (targetDelta / aspectRatio) * ySign // Need opposite sign
+
+                    var constrainedLeft = max(image.left, min(newLeft, frame.right - mMinFrameSize))
+                    var constrainedBottom = max(frame.top + mMinFrameSize, min(newBottom, image.bottom))
+
+                    val newWidthX = frame.right - constrainedLeft
+                    val newHeightY = constrainedBottom - frame.top
+
+                    if (newWidthX / aspectRatio > newHeightY) {
+                        // Y is the limiting factor (new height is smaller than required)
+                        frame.bottom = constrainedBottom
+                        frame.left = frame.right - newHeightY * aspectRatio
+                    } else {
+                        // X is the limiting factor
+                        frame.left = constrainedLeft
+                        frame.bottom = frame.top + newWidthX / aspectRatio
                     }
                 }
                 checkScaleBounds()
@@ -637,7 +919,7 @@ class CropImageView @JvmOverloads constructor(
                     frame.right = max(frame.left + mMinFrameSize, min(frame.right + diffX, image.right))
                     frame.bottom = max(frame.top + mMinFrameSize, min(frame.bottom + diffY, image.bottom))
                 } else {
-                    val dx = diffX
+                  /*  val dx = diffX
                     val dy = dx * ratioY / ratioX
                     frame.right = max(frame.left + mMinFrameSize, min(frame.right + dx, image.right))
                     frame.bottom = max(frame.top + mMinFrameSize, min(frame.bottom + dy, image.bottom))
@@ -648,6 +930,29 @@ class CropImageView @JvmOverloads constructor(
                     if (frame.height() < mMinFrameSize) {
                         frame.bottom = frame.top + mMinFrameSize
                         frame.right = frame.left + (mMinFrameSize * ratioX / ratioY)
+                    }*/
+                    // Ratio constrained mode
+                    val targetDelta = if (abs(diffX) > abs(diffY)) diffX else diffY
+
+                    // New Right boundary: must increase when moving right (pos targetDelta)
+                    val newRight = frame.right + targetDelta
+                    // New Bottom boundary: must increase when moving down (pos targetDelta)
+                    val newBottom = frame.bottom + targetDelta / aspectRatio
+
+                    var constrainedRight = max(frame.left + mMinFrameSize, min(newRight, image.right))
+                    var constrainedBottom = max(frame.top + mMinFrameSize, min(newBottom, image.bottom))
+
+                    val newWidthX = constrainedRight - frame.left
+                    val newHeightY = constrainedBottom - frame.top
+
+                    if (newWidthX / aspectRatio > newHeightY) {
+                        // Y is the limiting factor (new height is smaller than required)
+                        frame.bottom = constrainedBottom
+                        frame.right = frame.left + newHeightY * aspectRatio
+                    } else {
+                        // X is the limiting factor
+                        frame.right = constrainedRight
+                        frame.bottom = frame.top + newWidthX / aspectRatio
                     }
                 }
                 checkScaleBounds()
@@ -655,15 +960,27 @@ class CropImageView @JvmOverloads constructor(
         }
     }
 
-    private fun checkScaleBounds() {
+   /* private fun checkScaleBounds() {
         mFrameRect?.let { frame ->
             mImageRect?.let { image ->
+                if (frame.width() < mMinFrameSize) {
+                    // Adjust width to min size, centered
+                    val centerX = frame.centerX()
+                    frame.left = centerX - mMinFrameSize / 2
+                    frame.right = centerX + mMinFrameSize / 2
+                }
+                if (frame.height() < mMinFrameSize) {
+                    // Adjust height to min size, centered
+                    val centerY = frame.centerY()
+                    frame.top = centerY - mMinFrameSize / 2
+                    frame.bottom = centerY + mMinFrameSize / 2
+                }
                 // Ensure frame stays within image bounds
                 frame.left = max(image.left, min(frame.left, image.right - mMinFrameSize))
                 frame.right = min(image.right, max(frame.right, image.left + mMinFrameSize))
                 frame.top = max(image.top, min(frame.top, image.bottom - mMinFrameSize))
                 frame.bottom = min(image.bottom, max(frame.bottom, image.top + mMinFrameSize))
-
+/*
                 // Maintain screen aspect ratio
                 val screenAspect = context.resources.displayMetrics.widthPixels.toFloat() / context.resources.displayMetrics.heightPixels
                 val currentRatio = frame.width() / frame.height()
@@ -679,7 +996,35 @@ class CropImageView @JvmOverloads constructor(
                     val centerY = frame.centerY()
                     frame.top = centerY - newHeight / 2
                     frame.bottom = centerY + newHeight / 2
+                }*/
+            }
+        }
+    }*/
+
+    private fun checkScaleBounds() {
+        mFrameRect?.let { frame ->
+            mImageRect?.let { image ->
+
+                // 1. Enforce Minimum Size
+                if (frame.width() < mMinFrameSize || frame.height() < mMinFrameSize) {
+                    val centerX = frame.centerX()
+                    val centerY = frame.centerY()
+
+                    frame.left = centerX - mMinFrameSize / 2
+                    frame.right = centerX + mMinFrameSize / 2
+                    frame.top = centerY - mMinFrameSize / 2
+                    frame.bottom = centerY + mMinFrameSize / 2
                 }
+
+                // 2. Enforce Image Bounds
+                val width = frame.width()
+                val height = frame.height()
+
+                // Clamp frame to image bounds, moving it if necessary
+                frame.left = max(image.left, min(frame.left, image.right - width))
+                frame.right = frame.left + width
+                frame.top = max(image.top, min(frame.top, image.bottom - height))
+                frame.bottom = frame.top + height
             }
         }
     }
@@ -798,6 +1143,8 @@ class CropImageView @JvmOverloads constructor(
             CropMode.RATIO_CUSTOM -> mCustomRatio.y
             else -> screenHeight
         }
+    private val aspectRatio: Float
+        get() = if (ratioY > 0) ratioX / ratioY else 1.0f
 
     private val density: Float
         get() = context.resources.displayMetrics.density
@@ -922,6 +1269,28 @@ class CropImageView @JvmOverloads constructor(
             }
         }
         return imageUri
+    }
+    fun saveCroppedImageNew(context: Context, oldUri: Uri): Boolean {
+        val croppedBitmap = croppedBitmap ?: return false
+        return try {
+            val pfd = context.contentResolver.openFileDescriptor(oldUri, "w") ?: return false
+            FileOutputStream(pfd.fileDescriptor).use { outputStream ->
+                croppedBitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                outputStream.flush()
+            }
+            pfd.close()
+
+            // Optional: trigger MediaStore to update thumbnails
+            context.contentResolver.update(oldUri, ContentValues().apply {
+                put(MediaStore.Images.Media.DATE_MODIFIED, System.currentTimeMillis() / 1000)
+            }, null, null)
+            //context.contentResolver.update(oldUri, ContentValues(), null, null)
+
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
     }
 
     fun getImageUri(): Uri? {
@@ -1187,7 +1556,7 @@ class CropImageView @JvmOverloads constructor(
         null
     }
 
-    suspend fun zoomOut(): Bitmap? = withContext(Dispatchers.Main) {
+   /* suspend fun zoomOut(): Bitmap? = withContext(Dispatchers.Main) {
         Log.d(TAG, "Zoom Out: currentScale=$mScale")
         if (mScale / 1.25f >= MIN_ZOOM) {
             mScale /= 1.25f
@@ -1197,7 +1566,33 @@ class CropImageView @JvmOverloads constructor(
             Log.d(TAG, "Zoomed to scale=$mScale")
         }
         null
-    }
+    }*/
+   suspend fun zoomOut(): Bitmap? = withContext(Dispatchers.Main) {
+       Log.d(TAG, "Zoom Out: currentScale=$mScale")
+
+       // Calculate the effective minimum zoom (initial fit scale)
+       val initialScale = calculateInitialScale(mViewWidth, mViewHeight, mImgWidth, mImgHeight)
+       val effectiveMinZoom = max(MIN_ZOOM, initialScale)
+
+       val targetScale = mScale / 1.25f
+
+       if (targetScale >= effectiveMinZoom) {
+           mScale = targetScale
+           // checkScaleBounds() // Not strictly needed here
+           setMatrix()
+           invalidate()
+           Log.d(TAG, "Zoomed to scale=$mScale")
+       } else if (mScale > effectiveMinZoom) {
+           // If the target is too low, clamp to the minimum effective scale
+           mScale = effectiveMinZoom
+           // checkScaleBounds() // Not strictly needed here
+           setMatrix()
+           invalidate()
+           Log.d(TAG, "Clamped to minimum scale=$mScale")
+       }
+       null
+   }
+
 
     suspend fun rotateImageByDegrees(degrees: Float): Bitmap? = withContext(Dispatchers.Main) {
         Log.d(TAG, "Rotating image by $degrees degrees, current angle=$mAngle")
@@ -1386,9 +1781,13 @@ class CropImageView @JvmOverloads constructor(
     companion object {
         private const val TAG = "CropImageView"
         private const val HANDLE_SIZE_IN_DP = 16
-        private const val MIN_FRAME_SIZE_IN_DP = 50
+        private const val MIN_FRAME_SIZE_IN_DP = 150f
+        private const val INITIAL_FRAME_SCALE = 1.0f
         private const val FRAME_STROKE_WEIGHT_IN_DP = 3f
         private const val GUIDE_STROKE_WEIGHT_IN_DP = 2f
         private const val DEFAULT_INITIAL_FRAME_SCALE = 0.8f
+        private const val MIN_FRAME_SIZE_PERCENTAGE = 0.10f
+        private const val MIN_ZOOM = 1.0f
+        private const val MAX_ZOOM = 5.0f
     }
 }

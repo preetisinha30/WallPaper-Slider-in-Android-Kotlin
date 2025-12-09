@@ -81,12 +81,13 @@ class WallpaperForegroundService : Service() {
             }*/
 
 
-            Log.d("WallpaperService", "Foreground service started")
-
+           // isInPreview = intent?.getBooleanExtra("isPreview", isInPreview) ?: isInPreview
+            val launchPreviewExplicitly = intent?.getBooleanExtra("isPreview", false) ?: false
+            Log.d("WallpaperService", "Foreground service started. Current state: isInPreview=$launchPreviewExplicitly")
             startForeground(serviceId, createTemporaryNotification())
 
-            isInPreview = intent?.getBooleanExtra("isPreview", isInPreview) ?: isInPreview
-            if (!iswallpaperSet() || isInPreview) {
+
+           /* if (!iswallpaperSet() || isInPreview) {
                 Log.d("WallpaperForegroundService", "Wallpaper not set or in preview, stopping foreground")
                 stopForeground(true)
                 notificationManager.cancel(serviceId)
@@ -98,6 +99,29 @@ class WallpaperForegroundService : Service() {
             } else {
                 startForeground(serviceId, createNotification())
                 callWallpaperService(applicationContext)
+            }*/
+            val isSet = iswallpaperSet()
+            if (isSet && !launchPreviewExplicitly) {
+                // CASE A: Wallpaper is set, running normally.
+                Log.d("WFS", "Wallpaper is set. Switching to permanent notification.")
+                // Update to the permanent notification
+                startForeground(serviceId, createNotification())
+
+                // Notify the already running MyWallpaperService engine
+                callWallpaperService(applicationContext)
+
+            } else {
+                // CASE B: Wallpaper is NOT set OR we are explicitly launching the preview.
+                Log.d("WFS", "Launching wallpaper picker. isSet=$isSet, isInPreview=$isInPreview")
+
+                // Launch the system's live wallpaper picker activity
+                callWallpaperService(applicationContext)
+
+                // Since the picker activity takes over, the service's job is done for now.
+                // We stop the foreground state and self-terminate.
+                stopForeground(true)
+                notificationManager.cancel(serviceId)
+                stopSelf()
             }
             return START_NOT_STICKY
         }
@@ -207,18 +231,20 @@ class WallpaperForegroundService : Service() {
     }
 
     private fun callWallpaperService(packageContext: Context){
-        if (iswallpaperSet()) {
+       /* if (iswallpaperSet()) {
             Log.d("WallpaperForegroundService", "Wallpaper already set, starting MyWallpaperService")
             val wallpaperIntent = Intent(applicationContext, MyWallpaperService::class.java)
             startService(wallpaperIntent)
             return
-        }
+        }*/
         if (Build.VERSION.SDK_INT > 16) {
 
             val wallpaperManager = WallpaperManager.getInstance(this)
-
+            val info = wallpaperManager.wallpaperInfo
             try {
-                wallpaperManager.clear()
+                if (info != null && info.packageName == this.packageName) {
+                    wallpaperManager.clear()
+                }
                 Log.d("WallpaperForegroundService", "Cleared existing wallpaper")
             } catch (e: IOException) {
                 Log.e("WallpaperForegroundService", "Error clearing wallpaper: ${e.message}", e)
@@ -226,26 +252,23 @@ class WallpaperForegroundService : Service() {
 
             }
         }
-
+        val prefs = getSharedPreferences("prompt_wallpaper_shown", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("prompt_wallpaper_shown", true).apply()
         val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
             putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT,
                 ComponentName(packageContext, MyWallpaperService::class.java))
         }
-        /*try {
-            packageContext.startActivity(intent)
-        } catch (e: ActivityNotFoundException) {
-            Log.e("WallpaperService", "Failed to launch wallpaper activity", e)
-        }*/
+
         try {
             packageContext.startActivity(intent)
             Log.d("WallpaperForegroundService", "Launched live wallpaper picker")
             // Stop the foreground service if in preview or wallpaper not set to avoid lingering
-            if (!iswallpaperSet() || isInPreview) {
+            /*if (!iswallpaperSet() || isInPreview) {
                 stopForeground(true)
                 notificationManager.cancel(serviceId)
                 stopSelf()
-            }
+            }*/
 
         } catch (e: ActivityNotFoundException) {
             Log.e("WallpaperForegroundService", "Failed to launch wallpaper activity", e)
@@ -256,6 +279,8 @@ class WallpaperForegroundService : Service() {
 
 
     }
+
+
 
     override fun onDestroy() {
         stopForeground(true)

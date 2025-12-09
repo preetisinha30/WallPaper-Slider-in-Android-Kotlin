@@ -8,15 +8,142 @@
     android:fitsSystemWindows="true">
     <include
         android:id="@+id/xml_toolbar"
-        layout="@layout/toolbar"/>
+        layout="@layout/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"/>
+    <TextView
+        android:id="@+id/duration_status_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Wallpapers change every: 30s. Change ⚙️"
+        android:textColor="@color/blue_200"
+        android:textSize="12sp"
+        android:gravity="center"
+        android:padding="4dp"
+        app:layout_constraintTop_toBottomOf="@+id/xml_toolbar"
+        android:elevation="2dp" />
+
+    <com.np.wallpaperslider.SpotlightView
+        android:id="@+id/coach_mark_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+    <TextView
+        android:id="@+id/overlay_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Long press on any image to start grouping"
+        android:textSize="20sp"
+        android:textColor="@color/white"
+        android:gravity="center_horizontal"
+        android:layout_marginTop="180dp"
+        android:elevation="10dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@+id/duration_status_text"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:background="@null"/>
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_activate_wallpaper"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/apply_wallpaper"
+        android:textAllCaps="true"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@+id/bottom_navigation"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="16dp"
+        android:elevation="8dp"
+        android:layout_marginEnd="16dp"
+        android:textSize="14sp"
+        android:padding="12dp"
+        app:icon="@drawable/next"
+        app:iconGravity="start"
+        app:iconPadding="8dp"
+        app:cornerRadius="8dp"
+        app:backgroundTint="@color/purple_100"
+        style="@style/Widget.Material3.Button.ElevatedButton"
+        />
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_navigation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="8dp"
+        android:background="@drawable/bottom_nav_background"
+        android:elevation="6dp"
+        app:itemIconSize="24dp"
+        app:itemTextAppearanceActive="@style/BottomNavTextAppearance"
+        app:itemTextAppearanceInactive="@style/BottomNavTextAppearance"
+        app:itemTextColor="@color/bottom_nav_color_selector"
+        app:itemIconTint="@color/bottom_nav_color_selector"
+        app:itemBackground="@color/transparent"
+        app:menu="@menu/bottom_nav_menu"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_grid"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginTop="70dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        app:layout_constraintTop_toBottomOf="@+id/duration_status_text"
+        app:layout_constraintBottom_toTopOf="@+id/btn_activate_wallpaper"
         app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/xml_toolbar" />
+        app:layout_constraintRight_toRightOf="parent" />
+
+
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_generate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/ic_sparkle"
+        android:visibility="gone"
+        app:fabSize="mini"
+        app:backgroundTint="@color/purple_100"
+        style="@style/Widget.Material3.Button.ElevatedButton"
+        android:contentDescription="Generate Image"
+        android:layout_marginBottom="16dp"
+        app:layout_constraintBottom_toTopOf="@+id/fab_camera"
+        app:layout_constraintEnd_toEndOf="@+id/fab_main" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_camera"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/ic_camera"
+        android:visibility="gone"
+        app:fabSize="mini"
+        app:backgroundTint="@color/purple_100"
+        style="@style/Widget.Material3.Button.ElevatedButton"
+        android:contentDescription="Open Camera"
+        android:layout_marginBottom="16dp"
+        app:layout_constraintBottom_toTopOf="@+id/fab_main"
+        app:layout_constraintEnd_toEndOf="@+id/fab_main" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_main"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        app:backgroundTint="@color/purple_100"
+        style="@style/Widget.Material3.Button.ElevatedButton"
+        android:src="@drawable/baseline_add_a_photo_24"
+        app:layout_constraintBottom_toTopOf="@+id/bottom_navigation"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+
+
 </androidx.constraintlayout.widget.ConstraintLayout>

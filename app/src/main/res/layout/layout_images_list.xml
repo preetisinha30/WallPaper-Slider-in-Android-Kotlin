@@ -28,7 +28,19 @@
                 android:src="@mipmap/ic_launcher"
                 android:scaleType="centerCrop" />
 
+
         </LinearLayout>
+        <ImageView
+            android:id="@+id/category_indicator"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="top|end"
+            android:layout_margin="4dp"
+            android:scaleType="centerInside"
+            android:padding="4dp"
+            android:background="@drawable/category_indicator_background"
+            android:contentDescription="Category indicator"
+            android:visibility="gone" />
 
         <CheckBox
             android:id="@+id/delete_checkbox"

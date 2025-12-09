@@ -2,11 +2,16 @@
 <resources>
 
     <style name="Theme.WallPaperSlider" parent="Theme.Material3.DayNight.NoActionBar">
-    <item name="colorPrimary">@color/blue_200</item>
-    <item name="colorPrimaryVariant">@color/purple_200</item>
-    <item name="colorOnPrimary">@color/purple_100</item>
+        <item name="android:textSize">14sp</item>
+        <item name="colorPrimary">@color/blue_200</item>
+
+        <item name="colorPrimaryVariant">@color/purple_200</item>
+        <item name="colorOnPrimary">@color/purple_100</item>
         <item name="checkboxStyle">@style/CustomCheckbox</item>
         <item name="android:windowBackground">@color/white</item>
+        <item name="colorSecondary">@color/purple_100</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <item name="colorAccent">@color/purple_100</item>
     </style>
     <!--<style name="AlertDialogCustom" parent="@android:style/Theme.Material.Dialog">
         <item name="android:textColor">@color/white</item>
@@ -63,5 +68,15 @@
     <style name="CustomCheckbox">
         <item name="android:button">@drawable/checkbox_selector</item>
         <item name="android:buttonTint">@null</item>
+    </style>
+    <style name="BottomNavTextAppearance" parent="TextAppearance.Material3.LabelMedium">
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/blue_200</item>
+    </style>
+    <style name="Widget.App.TabLayout" parent="Widget.MaterialComponents.TabLayout.Colored">
+        <item name="tabBackground">@null</item>
+        <item name="tabPaddingStart">4dp</item>
+        <item name="tabPaddingEnd">4dp</item>
+        <item name="tabRippleColor">@null</item>
     </style>
 </resources>
