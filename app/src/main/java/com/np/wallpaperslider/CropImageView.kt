@@ -20,6 +20,7 @@ import android.content.ContentValues
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.os.Parcel
+import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.*
@@ -84,6 +85,8 @@ class CropImageView @JvmOverloads constructor(
     private val screenAspectRatio: Float
     private val screenWidth: Float
     private val screenHeight: Float
+    private var mTargetWallpaperWidth = 0f
+    private var mTargetWallpaperHeight = 0f
 
     val mDensity = density
 
@@ -116,7 +119,7 @@ class CropImageView @JvmOverloads constructor(
         // Initialize scale gesture detector
         scaleGestureDetector = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
             override fun onScale(detector: ScaleGestureDetector): Boolean {
-                Log.d(TAG, "ScaleGestureDetector: scaleFactor=${detector.scaleFactor}, focusX=${detector.focusX}, focusY=${detector.focusY}")
+                AppLogger.d(TAG, "ScaleGestureDetector: scaleFactor=${detector.scaleFactor}, focusX=${detector.focusX}, focusY=${detector.focusY}")
                 val scaleFactor = detector.scaleFactor
                 var newScale = mScale * scaleFactor
                /* if (newScale in MIN_ZOOM..MAX_ZOOM) {
@@ -164,7 +167,7 @@ class CropImageView @JvmOverloads constructor(
         mMatrix.reset()
         mLastX = 0f
         mLastY = 0f
-        Log.d(TAG, "State reset for new image")
+        AppLogger.d(TAG, "State reset for new image")
     }
 
     // Lifecycle methods
@@ -279,12 +282,12 @@ class CropImageView @JvmOverloads constructor(
 
     private fun drawEditFrame(canvas: Canvas) {
         if (!mIsCropEnabled || mFrameRect == null || mImageRect == null) {
-            Log.w(TAG, "Skipping drawEditFrame: cropEnabled=$mIsCropEnabled, frameRect=$mFrameRect, imageRect=$mImageRect")
+            AppLogger.w(TAG, "Skipping drawEditFrame: cropEnabled=$mIsCropEnabled, frameRect=$mFrameRect, imageRect=$mImageRect")
             return
         }
 
         // Log frame rect for debugging
-        Log.d(TAG, "drawEditFrame: frameRect=[left=${mFrameRect!!.left}, top=${mFrameRect!!.top}, right=${mFrameRect!!.right}, bottom=${mFrameRect!!.bottom}]")
+        AppLogger.d(TAG, "drawEditFrame: frameRect=[left=${mFrameRect!!.left}, top=${mFrameRect!!.top}, right=${mFrameRect!!.right}, bottom=${mFrameRect!!.bottom}]")
 
         // Draw overlay (dimmed area outside crop frame)
         mPaintTransparent.apply {
@@ -308,7 +311,7 @@ class CropImageView @JvmOverloads constructor(
             canvas.drawRect(mImageRect!!.left, mFrameRect!!.bottom, mImageRect!!.right, mImageRect!!.bottom, mPaintTransparent)
             canvas.drawRect(mImageRect!!.left, mFrameRect!!.top, mFrameRect!!.left, mFrameRect!!.bottom, mPaintTransparent)
             canvas.drawRect(mFrameRect!!.right, mFrameRect!!.top, mImageRect!!.right, mFrameRect!!.bottom, mPaintTransparent)
-            Log.d(TAG, "drawEditFrame-mImageRect: left=${mImageRect!!.left}, top=${mImageRect!!.top}, bottom=${mImageRect!!.bottom}, right=${mImageRect!!.right}")
+            AppLogger.d(TAG, "drawEditFrame-mImageRect: left=${mImageRect!!.left}, top=${mImageRect!!.top}, bottom=${mImageRect!!.bottom}, right=${mImageRect!!.right}")
         }
 
         // Draw crop frame (ensure it's on top)
@@ -327,14 +330,14 @@ class CropImageView @JvmOverloads constructor(
                 color = mGuideColor
                 strokeWidth = mGuideStrokeWeight
             }
-            /*val h1 = mFrameRect!!.left + (mFrameRect!!.right - mFrameRect!!.left) / 4.0f
-            val h2 = mFrameRect!!.right - (mFrameRect!!.right - mFrameRect!!.left) / 4.0f
-            val v1 = mFrameRect!!.top + (mFrameRect!!.bottom - mFrameRect!!.top) / 4.0f
-            val v2 = mFrameRect!!.bottom - (mFrameRect!!.bottom - mFrameRect!!.top) / 4.0f*/
-            val h1 = mFrameRect!!.left + mFrameRect!!.width() / 3.0f
+            val h1 = mFrameRect!!.left + (mFrameRect!!.right - mFrameRect!!.left) / 3.0f
+            val h2 = mFrameRect!!.right - (mFrameRect!!.right - mFrameRect!!.left) / 3.0f
+            val v1 = mFrameRect!!.top + (mFrameRect!!.bottom - mFrameRect!!.top) / 3.0f
+            val v2 = mFrameRect!!.bottom - (mFrameRect!!.bottom - mFrameRect!!.top) / 3.0f
+           /* val h1 = mFrameRect!!.left + mFrameRect!!.width() / 3.0f
             val h2 = mFrameRect!!.right - mFrameRect!!.width() / 3.0f
             val v1 = mFrameRect!!.top + mFrameRect!!.height() / 3.0f
-            val v2 = mFrameRect!!.bottom - mFrameRect!!.height() / 3.0f
+            val v2 = mFrameRect!!.bottom - mFrameRect!!.height() / 3.0f*/
             canvas.drawLine(h1, mFrameRect!!.top, h1, mFrameRect!!.bottom, mPaintFrame)
             canvas.drawLine(h2, mFrameRect!!.top, h2, mFrameRect!!.bottom, mPaintFrame)
             canvas.drawLine(mFrameRect!!.left, v1, mFrameRect!!.right, v1, mPaintFrame)
@@ -450,14 +453,14 @@ private fun setMatrix() {
         val top = points.asSequence().filterIndexed { index, _ -> index % 2 == 1 }.minOrNull() ?: 0f
         val bottom = points.asSequence().filterIndexed { index, _ -> index % 2 == 1 }.maxOrNull() ?: mImgHeight
         mImageRect = RectF(left, top, right, bottom)
-        Log.d(TAG, "updateImageRect: left=$left, top=$top, right=$right, bottom=$bottom")
+        AppLogger.d(TAG, "updateImageRect: left=$left, top=$top, right=$right, bottom=$bottom")
     }
 
     private fun initLayout(viewW: Int, viewH: Int) {
         mImgWidth = drawable?.intrinsicWidth?.toFloat() ?: viewW.toFloat()
         mImgHeight = drawable?.intrinsicHeight?.toFloat() ?: viewH.toFloat()
         if (mImgWidth <= 0 || mImgHeight <= 0) {
-            Log.e(TAG, "Invalid image dimensions: width=$mImgWidth, height=$mImgHeight")
+            AppLogger.e(TAG, "Invalid image dimensions: width=$mImgWidth, height=$mImgHeight")
             return
         }
 
@@ -491,33 +494,16 @@ private fun setMatrix() {
         //till here
         initCropFrame()
         mIsInitialized = true
-        Log.d(TAG, "initLayout: scale=$mScale, centerX=${mCenter.x}, centerY=${mCenter.y}")
+        AppLogger.d(TAG, "initLayout: scale=$mScale, centerX=${mCenter.x}, centerY=${mCenter.y}")
     }
 
     private fun initCropFrame() {
         setMatrix()
         if (mImgWidth <= 0 || mImgHeight <= 0 || mImageRect == null) {
-            Log.e(TAG, "Cannot init crop frame: mImgWidth=$mImgWidth, mImgHeight=$mImgHeight, mImageRect=$mImageRect")
+            AppLogger.e(TAG, "Cannot init crop frame: mImgWidth=$mImgWidth, mImgHeight=$mImgHeight, mImageRect=$mImageRect")
             return
         }
-/*
-        // Initialize crop frame to match mImageRect
-        mFrameRect = RectF(mImageRect!!.left, mImageRect!!.top, mImageRect!!.right, mImageRect!!.bottom)
-        checkScaleBounds() // Adjust to maintain screen aspect ratio
-        //mHandleSize = (min(mViewWidth, mViewHeight) * 0.05f).toInt()
-        //mTouchPadding = (min(mViewWidth, mViewHeight) * 0.02f).toInt()
-        //mMinFrameSize = mDensity * MIN_FRAME_SIZE_IN_DP
-        //mMinFrameSize = min(mViewWidth, mViewHeight) * 0.1f
-        val minViewDimension = min(mViewWidth, mViewWidth).toFloat()
-        mHandleSize = (minViewDimension * 0.05f).toInt().coerceAtLeast(30) // Ensure handles are touchable
-
-        mTouchPadding = (minViewDimension * 0.02f).toInt().coerceAtLeast(15)
-        mMinFrameSize = max(
-            minViewDimension * MIN_FRAME_SIZE_PERCENTAGE,
-            MIN_FRAME_SIZE_IN_DP * mDensity // 60dp minimum for easy touching/visual clarity
-        )
-        Log.d(TAG, "initCropFrame: frameRect=[left=${mFrameRect?.left}, top=${mFrameRect?.top}, right=${mFrameRect?.right}, bottom=${mFrameRect?.bottom}]")
-        */
+    /*
         // Use the 80% scale to set the initial frame size
         val imgW = mImageRect!!.width()
         val imgH = mImageRect!!.height()
@@ -543,16 +529,48 @@ private fun setMatrix() {
 
         // Ensure all subsequent handle movements respect the small mMinFrameSize
         // checkScaleBounds() will now only enforce the *small* minimum size.
+        checkScaleBounds()*/
+        val targetRatio = mTargetWallpaperWidth / mTargetWallpaperHeight // Use the correct target ratio
+        val imageRatio = mImageRect!!.width() / mImageRect!!.height()
+
+        var frameW: Float
+        var frameH: Float
+
+        // Check if the image is proportionally wider than the required wallpaper ratio
+        if (imageRatio > targetRatio) {
+            // Image is wide: Set frame height to max possible (image height) and calculate width based on ratio
+            frameH = mImageRect!!.height() * mInitialFrameScale
+            frameW = frameH * targetRatio * mInitialFrameScale
+        } else {
+            // Image is tall: Set frame width to max possible (image width) and calculate height based on ratio
+            frameW = mImageRect!!.width() * mInitialFrameScale
+            frameH = frameW / targetRatio * mInitialFrameScale
+        }
+
+        // Center the frame
+        val centerX = mImageRect!!.centerX()
+        val centerY = mImageRect!!.centerY()
+
+        mFrameRect = RectF(
+            centerX - frameW / 2,
+            centerY - frameH / 2,
+            centerX + frameW / 2,
+            centerY + frameH / 2
+        )
+
+        // Ensure the initial frame is within image bounds
         checkScaleBounds()
+
+        AppLogger.d(TAG, "initCropFrame: Ratio-fixed to $targetRatio. Frame size: ${mFrameRect!!.width()}x${mFrameRect!!.height()}")
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (!mIsInitialized || !mIsEnabled) {
-            Log.e(TAG, "Touch ignored: mIsInitialized=$mIsInitialized, mIsEnabled=$mIsEnabled")
+            AppLogger.e(TAG, "Touch ignored: mIsInitialized=$mIsInitialized, mIsEnabled=$mIsEnabled")
             return false
         }
         parent.requestDisallowInterceptTouchEvent(true)
-        Log.d(TAG, "Touch event: action=${event.actionMasked}, pointerCount=${event.pointerCount}")
+        AppLogger.d(TAG, "Touch event: action=${event.actionMasked}, pointerCount=${event.pointerCount}")
         scaleGestureDetector.onTouchEvent(event)
         when (event.action and MotionEvent.ACTION_MASK) {
             MotionEvent.ACTION_DOWN -> {
@@ -596,7 +614,7 @@ private fun setMatrix() {
     private fun onMove(e: MotionEvent) {
         val diffX = e.x - mLastX
         val diffY = e.y - mLastY
-        Log.d(TAG, "Move: diffX=$diffX, diffY=$diffY, touchArea=$mTouchArea")
+        AppLogger.d(TAG, "Move: diffX=$diffX, diffY=$diffY, touchArea=$mTouchArea")
         when (mTouchArea) {
             TouchArea.CENTER -> moveFrame(diffX, diffY)
             TouchArea.LEFT_TOP -> moveHandleLT(diffX, diffY)
@@ -769,21 +787,44 @@ private fun setMatrix() {
                     frame.left = max(image.left, min(frame.left + diffX, frame.right - mMinFrameSize))
                     frame.top = max(image.top, min(frame.top + diffY, frame.bottom - mMinFrameSize))
                 } else {
-                /*   val dx = diffX
-                    val dy = dx * ratioY / ratioX
-                    frame.left = max(image.left, min(frame.left + dx, frame.right - mMinFrameSize))
-                    frame.top = max(image.top, min(frame.top + dy, frame.bottom - mMinFrameSize))
-                    if (frame.width() < mMinFrameSize) {
-                        frame.left = frame.right - mMinFrameSize
-                        frame.top = frame.bottom - (mMinFrameSize * ratioY / ratioX)
+                    val dx = diffX
+                    val dy = diffX * ratioY / ratioX
+                    mFrameRect!!.left += dx
+                    mFrameRect!!.top += dy
+                    if (isWidthTooLarge || isHeightTooLarge){
+                        Toast.makeText(this.context,"Framebounds beyond wallpaper size",Toast.LENGTH_SHORT)
+                        return
                     }
-                    if (frame.height() < mMinFrameSize) {
-                        frame.top = frame.bottom - mMinFrameSize
-                        frame.left = frame.right - (mMinFrameSize * ratioX / ratioY)
+                    if (isWidthTooSmall) {
+                        val offsetX = mMinFrameSize - frameW
+                        mFrameRect!!.left -= offsetX
+                        val offsetY = offsetX * ratioY / ratioX
+                        mFrameRect!!.top -= offsetY
                     }
-                */
+                    if (isHeightTooSmall) {
+                        val offsetY = mMinFrameSize - frameH
+                        mFrameRect!!.top -= offsetY
+                        val offsetX = offsetY * ratioX / ratioY
+                        mFrameRect!!.left -= offsetX
+                    }
+                    var ox: Float
+                    var oy: Float
+                    if (!isInsideHorizontal(mFrameRect!!.left)) {
+                        ox = mImageRect!!.left - mFrameRect!!.left
+                        mFrameRect!!.left += ox
+                        oy = ox * ratioY / ratioX
+                        mFrameRect!!.top += oy
+                    }
+                    if (!isInsideVertical(mFrameRect!!.top)) {
+                        oy = mImageRect!!.top - mFrameRect!!.top
+                        mFrameRect!!.top += oy
+                        ox = oy * ratioX / ratioY
+                        mFrameRect!!.left += ox
+                    }
+
+
                     // Ratio constrained mode
-                    val currentWidth = frame.width()
+                 /*   val currentWidth = frame.width()
                     val currentHeight = frame.height()
                     val targetDelta = if (abs(diffX) > abs(diffY)) diffX else diffY
 
@@ -808,7 +849,7 @@ private fun setMatrix() {
                         // X is the limiting factor
                         frame.left = constrainedLeft
                         frame.top = frame.bottom - newWidthX / aspectRatio
-                    }
+                    }*/
                 }
                 checkScaleBounds()
             }
@@ -822,19 +863,42 @@ private fun setMatrix() {
                     frame.right = max(frame.left + mMinFrameSize, min(frame.right + diffX, image.right))
                     frame.top = max(image.top, min(frame.top + diffY, frame.bottom - mMinFrameSize))
                 } else {
-                  /*  val dx = diffX
-                    val dy = dx * ratioY / ratioX
-                    frame.right = max(frame.left + mMinFrameSize, min(frame.right + dx, image.right))
-                    frame.top = max(image.top, min(frame.top + dy, frame.bottom - mMinFrameSize))
-                    if (frame.width() < mMinFrameSize) {
-                        frame.right = frame.left + mMinFrameSize
-                        frame.top = frame.bottom - (mMinFrameSize * ratioY / ratioX)
+                    val dx = diffX
+                    val dy = diffX * ratioY / ratioX
+                    mFrameRect!!.right += dx
+                    mFrameRect!!.top -= dy
+                    if (isWidthTooLarge || isHeightTooLarge){
+                        Toast.makeText(this.context,"Framebounds beyond wallpaper size",Toast.LENGTH_SHORT)
+                        return
                     }
-                    if (frame.height() < mMinFrameSize) {
-                        frame.top = frame.bottom - mMinFrameSize
-                        frame.right = frame.left + (mMinFrameSize * ratioX / ratioY)
-                    }*/
-                    val targetDelta = if (abs(diffX) > abs(diffY)) diffX else diffY
+                    if (isWidthTooSmall) {
+                        val offsetX = mMinFrameSize - frameW
+                        mFrameRect!!.right += offsetX
+                        val offsetY = offsetX * ratioY / ratioX
+                        mFrameRect!!.top -= offsetY
+                    }
+                    if (isHeightTooSmall) {
+                        val offsetY = mMinFrameSize - frameH
+                        mFrameRect!!.top -= offsetY
+                        val offsetX = offsetY * ratioX / ratioY
+                        mFrameRect!!.right += offsetX
+                    }
+                    var ox: Float
+                    var oy: Float
+                    if (!isInsideHorizontal(mFrameRect!!.right)) {
+                        ox = mFrameRect!!.right - mImageRect!!.right
+                        mFrameRect!!.right -= ox
+                        oy = ox * ratioY / ratioX
+                        mFrameRect!!.top += oy
+                    }
+                    if (!isInsideVertical(mFrameRect!!.top)) {
+                        oy = mImageRect!!.top - mFrameRect!!.top
+                        mFrameRect!!.top += oy
+                        ox = oy * ratioX / ratioY
+                        mFrameRect!!.right -= ox
+                    }
+
+                   /* val targetDelta = if (abs(diffX) > abs(diffY)) diffX else diffY
 
                     // X: Right moves with diffX
                     val newRight = frame.right + targetDelta
@@ -856,7 +920,7 @@ private fun setMatrix() {
                         // X is the limiting factor
                         frame.right = constrainedRight
                         frame.top = frame.bottom - newWidthX / aspectRatio
-                    }
+                    }*/
                 }
                 checkScaleBounds()
             }
@@ -870,20 +934,43 @@ private fun setMatrix() {
                     frame.left = max(image.left, min(frame.left + diffX, frame.right - mMinFrameSize))
                     frame.bottom = max(frame.top + mMinFrameSize, min(frame.bottom + diffY, image.bottom))
                 } else {
-                 /*   val dx = diffX
-                    val dy = dx * ratioY / ratioX
-                    frame.left = max(image.left, min(frame.left + dx, frame.right - mMinFrameSize))
-                    frame.bottom = max(frame.top + mMinFrameSize, min(frame.bottom + dy, image.bottom))
-                    if (frame.width() < mMinFrameSize) {
-                        frame.left = frame.right - mMinFrameSize
-                        frame.bottom = frame.top + (mMinFrameSize * ratioY / ratioX)
+                    val dx = diffX
+                    val dy = diffX * ratioY / ratioX
+                    mFrameRect!!.left += dx
+                    mFrameRect!!.bottom -= dy
+                    if (isWidthTooLarge || isHeightTooLarge){
+                        Toast.makeText(this.context,"Framebounds beyond wallpaper size",Toast.LENGTH_SHORT)
+                        return
                     }
-                    if (frame.height() < mMinFrameSize) {
-                        frame.bottom = frame.top + mMinFrameSize
-                        frame.left = frame.right - (mMinFrameSize * ratioX / ratioY)
-                    }*/
+                    if (isWidthTooSmall) {
+                        val offsetX = mMinFrameSize - frameW
+                        mFrameRect!!.left -= offsetX
+                        val offsetY = offsetX * ratioY / ratioX
+                        mFrameRect!!.bottom += offsetY
+                    }
+                    if (isHeightTooSmall) {
+                        val offsetY = mMinFrameSize - frameH
+                        mFrameRect!!.bottom += offsetY
+                        val offsetX = offsetY * ratioX / ratioY
+                        mFrameRect!!.left -= offsetX
+                    }
+                    var ox: Float
+                    var oy: Float
+                    if (!isInsideHorizontal(mFrameRect!!.left)) {
+                        ox = mImageRect!!.left - mFrameRect!!.left
+                        mFrameRect!!.left += ox
+                        oy = ox * ratioY / ratioX
+                        mFrameRect!!.bottom -= oy
+                    }
+                    if (!isInsideVertical(mFrameRect!!.bottom)) {
+                        oy = mFrameRect!!.bottom - mImageRect!!.bottom
+                        mFrameRect!!.bottom -= oy
+                        ox = oy * ratioX / ratioY
+                        mFrameRect!!.left += ox
+                    }
+
                     // --- FIX: Ratio constrained mode for Bottom-Left (Left decreases, Bottom increases) ---
-                    val targetDelta = if (abs(diffX) > abs(diffY)) diffX else diffY
+                   /* val targetDelta = if (abs(diffX) > abs(diffY)) diffX else diffY
 
                     // X: Left moves with diffX
                     val newLeft = frame.left + targetDelta
@@ -905,7 +992,7 @@ private fun setMatrix() {
                         // X is the limiting factor
                         frame.left = constrainedLeft
                         frame.bottom = frame.top + newWidthX / aspectRatio
-                    }
+                    }*/
                 }
                 checkScaleBounds()
             }
@@ -919,20 +1006,43 @@ private fun setMatrix() {
                     frame.right = max(frame.left + mMinFrameSize, min(frame.right + diffX, image.right))
                     frame.bottom = max(frame.top + mMinFrameSize, min(frame.bottom + diffY, image.bottom))
                 } else {
-                  /*  val dx = diffX
-                    val dy = dx * ratioY / ratioX
-                    frame.right = max(frame.left + mMinFrameSize, min(frame.right + dx, image.right))
-                    frame.bottom = max(frame.top + mMinFrameSize, min(frame.bottom + dy, image.bottom))
-                    if (frame.width() < mMinFrameSize) {
-                        frame.right = frame.left + mMinFrameSize
-                        frame.bottom = frame.top + (mMinFrameSize * ratioY / ratioX)
+                    val dx = diffX
+                    val dy = diffX * ratioY / ratioX
+                    mFrameRect!!.right += dx
+                    mFrameRect!!.bottom += dy
+                    if (isWidthTooLarge || isHeightTooLarge){
+                        Toast.makeText(this.context,"Framebounds beyond wallpaper size",Toast.LENGTH_SHORT)
+                        return
                     }
-                    if (frame.height() < mMinFrameSize) {
-                        frame.bottom = frame.top + mMinFrameSize
-                        frame.right = frame.left + (mMinFrameSize * ratioX / ratioY)
-                    }*/
+                    if (isWidthTooSmall) {
+                        val offsetX = mMinFrameSize - frameW
+                        mFrameRect!!.right += offsetX
+                        val offsetY = offsetX * ratioY / ratioX
+                        mFrameRect!!.bottom += offsetY
+                    }
+                    if (isHeightTooSmall) {
+                        val offsetY = mMinFrameSize - frameH
+                        mFrameRect!!.bottom += offsetY
+                        val offsetX = offsetY * ratioX / ratioY
+                        mFrameRect!!.right += offsetX
+                    }
+
+                    var ox: Float
+                    var oy: Float
+                    if (!isInsideHorizontal(mFrameRect!!.right)) {
+                        ox = mFrameRect!!.right - mImageRect!!.right
+                        mFrameRect!!.right -= ox
+                        oy = ox * ratioY / ratioX
+                        mFrameRect!!.bottom -= oy
+                    }
+                    if (!isInsideVertical(mFrameRect!!.bottom)) {
+                        oy = mFrameRect!!.bottom - mImageRect!!.bottom
+                        mFrameRect!!.bottom -= oy
+                        ox = oy * ratioX / ratioY
+                        mFrameRect!!.right -= ox
+                    }
                     // Ratio constrained mode
-                    val targetDelta = if (abs(diffX) > abs(diffY)) diffX else diffY
+                  /*  val targetDelta = if (abs(diffX) > abs(diffY)) diffX else diffY
 
                     // New Right boundary: must increase when moving right (pos targetDelta)
                     val newRight = frame.right + targetDelta
@@ -953,7 +1063,7 @@ private fun setMatrix() {
                         // X is the limiting factor
                         frame.right = constrainedRight
                         frame.bottom = frame.top + newWidthX / aspectRatio
-                    }
+                    }*/
                 }
                 checkScaleBounds()
             }
@@ -1050,11 +1160,22 @@ private fun setMatrix() {
         return mImageRect?.let { y >= it.top && y <= it.bottom } ?: false
     }
 
+    private var mCustomRatioX = 1.0f
+    private var mCustomRatioY = 1.0f
+
+
+
     private val isWidthTooSmall: Boolean
         get() = frameW < mMinFrameSize
 
     private val isHeightTooSmall: Boolean
         get() = frameH < mMinFrameSize
+
+    private val isWidthTooLarge: Boolean
+        get() = frameW > mTargetWallpaperWidth
+
+    private val isHeightTooLarge: Boolean
+        get() = frameH > mTargetWallpaperHeight
 
     private fun adjustRatio() {
         if (mImageRect == null) return
@@ -1097,26 +1218,32 @@ private fun setMatrix() {
     private fun getRatioX(w: Float): Float {
         return when (mCropMode) {
             CropMode.RATIO_FIT_IMAGE -> mImgWidth
-            CropMode.RATIO_FREE -> screenWidth // Use screen aspect ratio for wallpaper
+            CropMode.RATIO_FREE -> w
             CropMode.RATIO_4_3 -> 4.0f
             CropMode.RATIO_3_4 -> 3.0f
             CropMode.RATIO_16_9 -> 16.0f
             CropMode.RATIO_9_16 -> 9.0f
             CropMode.RATIO_1_1, CropMode.CIRCLE -> 1.0f
             CropMode.RATIO_CUSTOM -> mCustomRatio.x
+            CropMode.RATIO_4_5 -> 4.0f
+            CropMode.RATIO_9_19 -> 9.0F
+            CropMode.RATIO_9_21 -> 9.0F
         }
     }
 
     private fun getRatioY(h: Float): Float {
         return when (mCropMode) {
             CropMode.RATIO_FIT_IMAGE -> mImgHeight
-            CropMode.RATIO_FREE -> screenHeight // Use screen aspect ratio for wallpaper
+            CropMode.RATIO_FREE -> h
             CropMode.RATIO_4_3 -> 3.0f
             CropMode.RATIO_3_4 -> 4.0f
             CropMode.RATIO_16_9 -> 9.0f
             CropMode.RATIO_9_16 -> 16.0f
             CropMode.RATIO_1_1, CropMode.CIRCLE -> 1.0f
             CropMode.RATIO_CUSTOM -> mCustomRatio.y
+            CropMode.RATIO_4_5 -> 5.0f
+            CropMode.RATIO_9_19 -> 19.0F
+            CropMode.RATIO_9_21 -> 21.0F
         }
     }
 
@@ -1129,6 +1256,9 @@ private fun setMatrix() {
             CropMode.RATIO_9_16 -> 9.0f
             CropMode.RATIO_1_1, CropMode.CIRCLE -> 1.0f
             CropMode.RATIO_CUSTOM -> mCustomRatio.x
+            CropMode.RATIO_4_5 -> 4.0f
+            CropMode.RATIO_9_19 -> 9.0F
+            CropMode.RATIO_9_21 -> 9.0F
             else -> screenWidth
         }
 
@@ -1141,6 +1271,9 @@ private fun setMatrix() {
             CropMode.RATIO_9_16 -> 16.0f
             CropMode.RATIO_1_1, CropMode.CIRCLE -> 1.0f
             CropMode.RATIO_CUSTOM -> mCustomRatio.y
+            CropMode.RATIO_4_5 -> 5.0f
+            CropMode.RATIO_9_19 -> 19.0F
+            CropMode.RATIO_9_21 -> 21.0F
             else -> screenHeight
         }
     private val aspectRatio: Float
@@ -1215,7 +1348,7 @@ private fun setMatrix() {
             if (!fileDir.exists()) fileDir.mkdirs()
             imageName = "$filePath/image${System.currentTimeMillis()}.png"
         } catch (e: Exception) {
-            Log.e(TAG, "Directory creation failed: ${e.message}", e)
+            AppLogger.e(TAG, "Directory creation failed: ${e.message}", e)
             return false
         }
 
@@ -1224,7 +1357,7 @@ private fun setMatrix() {
         try {
             fileCreated = imageFile.createNewFile()
         } catch (e: Exception) {
-            Log.e(TAG, "File creation failed: ${e.message}", e)
+            AppLogger.e(TAG, "File creation failed: ${e.message}", e)
             return false
         }
 
@@ -1233,7 +1366,7 @@ private fun setMatrix() {
             out = FileOutputStream(imageFile)
             bitmapCompressed = croppedBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
         } catch (e: IOException) {
-            Log.e(TAG, "Bitmap compression failed: ${e.message}", e)
+            AppLogger.e(TAG, "Bitmap compression failed: ${e.message}", e)
             return false
         } finally {
             try {
@@ -1241,11 +1374,11 @@ private fun setMatrix() {
                 out?.close()
                 streamClosed = true
             } catch (e: IOException) {
-                Log.e(TAG, "Stream closing failed: ${e.message}", e)
+                AppLogger.e(TAG, "Stream closing failed: ${e.message}", e)
                 streamClosed = false
             }
         }
-        Log.i(TAG, "Image saved: $fileCreated, $bitmapCompressed, $streamClosed")
+        AppLogger.i(TAG, "Image saved: $fileCreated, $bitmapCompressed, $streamClosed")
         return fileCreated && bitmapCompressed && streamClosed
     }
 
@@ -1264,12 +1397,13 @@ private fun setMatrix() {
                     croppedBitmap.compress(Bitmap.CompressFormat.PNG, 100, output)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to save cropped image: ${e.message}", e)
+                AppLogger.e(TAG, "Failed to save cropped image: ${e.message}", e)
                 return null
             }
         }
         return imageUri
     }
+    //overwrite existing file
     fun saveCroppedImageNew(context: Context, oldUri: Uri): Boolean {
         val croppedBitmap = croppedBitmap ?: return false
         return try {
@@ -1292,6 +1426,42 @@ private fun setMatrix() {
             false
         }
     }
+    //save cropped file as new file
+    fun saveCroppedImageNew1(context: Context, originalUri: Uri): Uri? {
+        val croppedBitmap = croppedBitmap ?: return null
+        val displayName = originalUri.lastPathSegment ?: "wall_crop_${System.currentTimeMillis()}.jpg"
+        // 1. Prepare metadata for the NEW image (using original image info)
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, displayName)
+            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/WallPaperApp")
+            put(MediaStore.Images.Media.DATE_ADDED, System.currentTimeMillis() / 1000)
+            put(MediaStore.Images.Media.DATE_MODIFIED, System.currentTimeMillis() / 1000)
+
+        }
+
+        // 2. Create a new entry in the MediaStore and get the new Uri
+        val newImageUri = context.contentResolver.insert(
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            contentValues
+        ) ?: return null
+
+        return try {
+            // 3. Open the new URI for writing and save the bitmap
+            context.contentResolver.openOutputStream(newImageUri).use { outputStream ->
+                croppedBitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream!!)
+                outputStream.flush()
+            }
+
+            // Success: Return the new Uri
+            newImageUri
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Delete the broken entry from MediaStore if saving failed
+            context.contentResolver.delete(newImageUri, null, null)
+            null
+        }
+    }
 
     fun getImageUri(): Uri? {
         return imageName?.let { Uri.parse(it) }
@@ -1301,7 +1471,7 @@ private fun setMatrix() {
         get() {
             val source = bitmap ?: return null
             if (mFrameRect == null || mImageRect == null) {
-                Log.w(TAG, "Frame or image rect is null")
+                AppLogger.w(TAG, "Frame or image rect is null")
                 return null
             }
 
@@ -1314,7 +1484,7 @@ private fun setMatrix() {
             if (mMatrix.invert(inverseMatrix)) {
                 inverseMatrix.mapPoints(points)
             } else {
-                Log.w(TAG, "Matrix inversion failed, using fallback mapping")
+                AppLogger.w(TAG, "Matrix inversion failed, using fallback mapping")
                 val dx = (mCenter.x - mViewWidth * 0.5f) / mScale
                 val dy = (mCenter.y - mViewHeight * 0.5f) / mScale
                 points[0] = (mFrameRect!!.left / mScale) - dx
@@ -1336,16 +1506,16 @@ private fun setMatrix() {
             val hClamped = min(h, source.height - yClamped)
 
             if (wClamped <= 0 || hClamped <= 0) {
-                Log.w(TAG, "Invalid crop dimensions: w=$wClamped, h=$hClamped")
+                AppLogger.w(TAG, "Invalid crop dimensions: w=$wClamped, h=$hClamped")
                 return null
             }
 
-            Log.d(TAG, "Crop: x=$xClamped, y=$yClamped, w=$wClamped, h=$hClamped")
+            AppLogger.d(TAG, "Crop: x=$xClamped, y=$yClamped, w=$wClamped, h=$hClamped")
             try {
                 val cropped = Bitmap.createBitmap(source, xClamped.toInt(), yClamped.toInt(), wClamped.toInt(), hClamped.toInt())
                 return if (mCropMode != CropMode.CIRCLE) cropped else getCircularBitmap(cropped)
             } catch (e: Exception) {
-                Log.e(TAG, "Crop failed: ${e.message}", e)
+                AppLogger.e(TAG, "Crop failed: ${e.message}", e)
                 return null
             }
         }
@@ -1354,7 +1524,7 @@ private fun setMatrix() {
         get() {
             val source = bitmap ?: return null
             if (mFrameRect == null || mImageRect == null) {
-                Log.w(TAG, "Frame or image rect is null")
+                AppLogger.w(TAG, "Frame or image rect is null")
                 return null
             }
 
@@ -1367,7 +1537,7 @@ private fun setMatrix() {
             if (mMatrix.invert(inverseMatrix)) {
                 inverseMatrix.mapPoints(points)
             } else {
-                Log.w(TAG, "Matrix inversion failed for rectBitmap, using fallback")
+                AppLogger.w(TAG, "Matrix inversion failed for rectBitmap, using fallback")
                 val dx = (mCenter.x - mViewWidth * 0.5f) / mScale
                 val dy = (mCenter.y - mViewHeight * 0.5f) / mScale
                 points[0] = (mFrameRect!!.left / mScale) - dx
@@ -1389,15 +1559,15 @@ private fun setMatrix() {
             val hClamped = min(h, source.height - yClamped)
 
             if (wClamped <= 0 || hClamped <= 0) {
-                Log.w(TAG, "Invalid rect crop dimensions: w=$wClamped, h=$hClamped")
+                AppLogger.w(TAG, "Invalid rect crop dimensions: w=$wClamped, h=$hClamped")
                 return null
             }
 
-            Log.d(TAG, "Rect crop: x=$xClamped, y=$yClamped, w=$wClamped, h=$hClamped")
+            AppLogger.d(TAG, "Rect crop: x=$xClamped, y=$yClamped, w=$wClamped, h=$hClamped")
             try {
                 return Bitmap.createBitmap(source, xClamped.toInt(), yClamped.toInt(), wClamped.toInt(), hClamped.toInt())
             } catch (e: Exception) {
-                Log.e(TAG, "Rect crop failed: ${e.message}", e)
+                AppLogger.e(TAG, "Rect crop failed: ${e.message}", e)
                 return null
             }
         }
@@ -1433,7 +1603,7 @@ private fun setMatrix() {
             if (mMatrix.invert(inverse)) {
                 inverse.mapPoints(points)
             } else {
-                Log.w(TAG, "Matrix inversion failed for actualCropRect, using fallback")
+                AppLogger.w(TAG, "Matrix inversion failed for actualCropRect, using fallback")
                 val dx = (mCenter.x - mViewWidth * 0.5f) / mScale
                 val dy = (mCenter.y - mViewHeight * 0.5f) / mScale
                 points[0] = (mFrameRect!!.left / mScale) - dx
@@ -1545,13 +1715,13 @@ private fun setMatrix() {
     }
 
     suspend fun zoomIn(): Bitmap? = withContext(Dispatchers.Main) {
-        Log.d(TAG, "Zoom In: currentScale=$mScale")
+        AppLogger.d(TAG, "Zoom In: currentScale=$mScale")
         if (mScale * 1.1f <= MAX_ZOOM) {
             mScale *= 1.1f
             checkScaleBounds()
             setMatrix()
             invalidate()
-            Log.d(TAG, "Zoomed to scale=$mScale")
+            AppLogger.d(TAG, "Zoomed to scale=$mScale")
         }
         null
     }
@@ -1568,7 +1738,7 @@ private fun setMatrix() {
         null
     }*/
    suspend fun zoomOut(): Bitmap? = withContext(Dispatchers.Main) {
-       Log.d(TAG, "Zoom Out: currentScale=$mScale")
+       AppLogger.d(TAG, "Zoom Out: currentScale=$mScale")
 
        // Calculate the effective minimum zoom (initial fit scale)
        val initialScale = calculateInitialScale(mViewWidth, mViewHeight, mImgWidth, mImgHeight)
@@ -1581,38 +1751,38 @@ private fun setMatrix() {
            // checkScaleBounds() // Not strictly needed here
            setMatrix()
            invalidate()
-           Log.d(TAG, "Zoomed to scale=$mScale")
+           AppLogger.d(TAG, "Zoomed to scale=$mScale")
        } else if (mScale > effectiveMinZoom) {
            // If the target is too low, clamp to the minimum effective scale
            mScale = effectiveMinZoom
            // checkScaleBounds() // Not strictly needed here
            setMatrix()
            invalidate()
-           Log.d(TAG, "Clamped to minimum scale=$mScale")
+           AppLogger.d(TAG, "Clamped to minimum scale=$mScale")
        }
        null
    }
 
 
     suspend fun rotateImageByDegrees(degrees: Float): Bitmap? = withContext(Dispatchers.Main) {
-        Log.d(TAG, "Rotating image by $degrees degrees, current angle=$mAngle")
+        AppLogger.d(TAG, "Rotating image by $degrees degrees, current angle=$mAngle")
         val source = bitmap ?: run {
-            Log.e(TAG, "Source bitmap is null")
+            AppLogger.e(TAG, "Source bitmap is null")
             return@withContext null
         }
         if (mImageRect == null) {
-            Log.e(TAG, "Image rect is null")
+            AppLogger.e(TAG, "Image rect is null")
             return@withContext null
         }
         if (mViewWidth <= 0 || mViewHeight <= 0) {
-            Log.e(TAG, "Invalid view dimensions: width=$mViewWidth, height=$mViewHeight")
+            AppLogger.e(TAG, "Invalid view dimensions: width=$mViewWidth, height=$mViewHeight")
             return@withContext null
         }
         // Normalize and update angle
         mAngle = (mAngle + degrees) % 360f
         setMatrix()
         invalidate()
-        Log.d(TAG, "Rotated to angle=$mAngle")
+        AppLogger.d(TAG, "Rotated to angle=$mAngle")
         null
     }
 
@@ -1649,6 +1819,15 @@ private fun setMatrix() {
     private val frameH: Float
         get() = mFrameRect?.let { it.bottom - it.top } ?: 0f
 
+    fun setTargetWallpaperSize(width: Int, height: Int) {
+        mTargetWallpaperWidth = width.toFloat()
+        mTargetWallpaperHeight = height.toFloat()
+        setCustomRatio(width, height)
+        if (mIsInitialized) {
+            adjustRatio() // This calls checkScaleBounds and invalidate
+        }
+    }
+
     // Enums
     private enum class TouchArea {
         OUT_OF_BOUNDS,
@@ -1670,6 +1849,9 @@ private fun setMatrix() {
         RATIO_FREE(6),
         RATIO_CUSTOM(7),
         CIRCLE(8),
+        RATIO_4_5(9),
+        RATIO_9_21(10),
+        RATIO_9_19(11)
     }
 
     enum class ShowMode(val id: Int) {

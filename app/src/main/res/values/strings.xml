@@ -14,4 +14,6 @@
     <string name="desc_cancel">Cancel cropping</string>
     <string name="desc_crop_image">Crop image</string>
     <string name="apply_wallpaper">Preview Wallpaper</string>
+    <string name="welcome_text">Wallpaper Slider</string>
+    <string name="subtitle_text">Long press and select 2 or more images to slide</string>
 </resources>

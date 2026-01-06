@@ -44,6 +44,10 @@ import java.io.File
 import kotlin.math.max
 import androidx.core.net.toUri
 import androidx.core.graphics.scale
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import androidx.core.graphics.createBitmap
+import kotlin.math.min
 
 
 class MyWallpaperService : WallpaperService() {
@@ -55,7 +59,7 @@ class MyWallpaperService : WallpaperService() {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
             messenger = Messenger(service)
             isBound = true
-            Log.d("MyWallpaperService", "Bound to WallpaperForegroundService${engine?.isPreview()}")
+            AppLogger.d("MyWallpaperService", "Bound to WallpaperForegroundService${engine?.isPreview()}")
             if (engine?.isPreview() == true) {
                 sendMessage(WallpaperForegroundService.MSG_REMOVE_NOTIFICATION)
             }
@@ -64,25 +68,25 @@ class MyWallpaperService : WallpaperService() {
         override fun onServiceDisconnected(name: ComponentName) {
             messenger = null
             isBound = false
-            Log.d("MyWallpaperService", "Unbound from WallpaperForegroundService${engine?.isPreview()}")
+            AppLogger.d("MyWallpaperService", "Unbound from WallpaperForegroundService${engine?.isPreview()}")
         }
     }
 
     override fun onCreate() {
         super.onCreate()
-        Log.d("MyWallpaperService", "Service onCreate")
-        if (!isPreviewSet()) {
-            Log.d("MyWallpaperService", "Service onCreate${isPreviewSet()}")
+
+      //  if (!isPreviewSet()) {
+
             bindService(
                 Intent(this, WallpaperForegroundService::class.java),
                 connection,
                 Context.BIND_AUTO_CREATE
             )
-        }
+       // }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d("MyWallpaperService", "onStartCommand: isWallpaperSet=${iswallpaperSet()}, isPreview=${engine?.isPreview()}")
+        AppLogger.d("MyWallpaperService", "onStartCommand: isWallpaperSet=${iswallpaperSet()}, isPreview=${engine?.isPreview()}")
         return START_NOT_STICKY
     }
 
@@ -92,15 +96,15 @@ class MyWallpaperService : WallpaperService() {
             val info = wpm.wallpaperInfo
 
             if (info != null && info.packageName == applicationContext.packageName) {
-                Log.d("MyWallpaperService", "We're already running")
+                AppLogger.d("MyWallpaperService", "We're already running")
                 return true
             } else {
-                Log.d("MyWallpaperService", "We're not running")
+                AppLogger.d("MyWallpaperService", "We're not running")
                 return false
             }
         }catch (e: Exception)
         {
-            Log.e("bitmappos....", e.message, e)
+            AppLogger.e("bitmappos....", e.message.toString(), e)
         }
         return false
     }
@@ -113,7 +117,7 @@ class MyWallpaperService : WallpaperService() {
     override fun onDestroy() {
         // Only send the remove message and unbind if we are the active wallpaper service
         if (iswallpaperSet() && !isPreviewSet()) {
-            Log.d("MyWallpaperService", "in ondestroy")
+
             sendMessage(WallpaperForegroundService.MSG_REMOVE_NOTIFICATION)
             if (isBound) {
                 unbindService(connection)
@@ -126,15 +130,15 @@ class MyWallpaperService : WallpaperService() {
 
     private fun sendMessage(messageType: Int) {
         if (!isBound || messenger == null) {
-            Log.w("MyWallpaperService", "Not bound to service, cannot send message: $messageType")
+            AppLogger.w("MyWallpaperService", "Not bound to service, cannot send message: $messageType")
             return
         }
         try {
             val msg = Message.obtain(null, messageType)
             messenger?.send(msg)
-            Log.d("MyWallpaperService", "Sent message: $messageType")
+            AppLogger.d("MyWallpaperService", "Sent message: $messageType")
         } catch (e: Exception) {
-            Log.e("MyWallpaperService", "Error sending message: ${e.message}", e)
+            AppLogger.e("MyWallpaperService", "Error sending message: ${e.message}", e)
         }
     }
 
@@ -256,8 +260,8 @@ class MyWallpaperService : WallpaperService() {
                     finalLockImages = lockList.distinct()
 
                     // Log the final counts
-                    Log.d("MyWallpaperService", "loadImagesByCategory Final HOME images loaded: ${finalHomeImages.size}")
-                    Log.d("MyWallpaperService", "loadImagesByCategory Final LOCK images loaded: ${finalLockImages.size}")
+                    AppLogger.d("MyWallpaperService", "loadImagesByCategory Final HOME images loaded: ${finalHomeImages.size}")
+                    AppLogger.d("MyWallpaperService", "loadImagesByCategory Final LOCK images loaded: ${finalLockImages.size}")
 
                 }
             }
@@ -266,7 +270,7 @@ class MyWallpaperService : WallpaperService() {
         private fun loadImageList(arrayName: String): List<String> {
             val prefs = getSharedPreferences("wallpaperimages", Context.MODE_PRIVATE)
             val size = prefs.getInt("${arrayName}_size", 0)
-            Log.d("MyWallpaperService", "Loading $arrayName, size: $size")
+            AppLogger.d("MyWallpaperService", "Loading $arrayName, size: $size")
             val images = mutableListOf<String>()
             for (index in 0 until size) {
                 prefs.getString("${arrayName}_$index", null)?.let { path ->
@@ -274,9 +278,9 @@ class MyWallpaperService : WallpaperService() {
                         try {
                             contentResolver.openInputStream(Uri.parse(path))?.close()
                             images.add(path)
-                            Log.d("MyWallpaperService", "loadImageList Valid URI for $arrayName[$index]: $path")
+                            AppLogger.d("MyWallpaperService", "loadImageList Valid URI for $arrayName[$index]: $path")
                         } catch (e: Exception) {
-                            Log.w("MyWallpaperService", "loadImageList Invalid URI for $arrayName[$index]: $path, error: ${e.message}")
+                            AppLogger.w("MyWallpaperService", "loadImageList Invalid URI for $arrayName[$index]: $path, error: ${e.message}")
                         }
                     }
                 }
@@ -299,13 +303,17 @@ class MyWallpaperService : WallpaperService() {
 
         override fun onCreate(surfaceHolder: SurfaceHolder?) {
             super.onCreate(surfaceHolder)
-            Log.d("MyWallpaperService", "in oncreate surfaceHolder")
+            AppLogger.d("MyWallpaperService", "in oncreate surfaceHolder")
             // Initial setup here.
         }
 
         override fun onSurfaceCreated(holder: SurfaceHolder?) {
             super.onSurfaceCreated(holder)
-
+            if (!isPreview()) {
+                // This is the REAL wallpaper starting.
+                // Tell the foreground service to show the notification now.
+                sendMessage(WallpaperForegroundService.MSG_SHOW_NOTIFICATION)
+            }
             // 1. Check and set the flags safely here
             safeUpdateWallpaperFlags()
             if(isPreview())
@@ -343,7 +351,7 @@ class MyWallpaperService : WallpaperService() {
                     prefs1.edit().putBoolean(PROMPT_WALLPAPER_SHOWN_KEY, true).apply()
                 }
             }
-            Log.d("MyWallpaperService", "onSurfaceCreated Flags after surface created: $currentWallpaperFlags")
+            AppLogger.d("MyWallpaperService", "onSurfaceCreated Flags after surface created: $currentWallpaperFlags")
         }
 
         override fun onVisibilityChanged(visible: Boolean) {
@@ -352,7 +360,7 @@ class MyWallpaperService : WallpaperService() {
 
             // Check if either list has images before starting the draw runner
             val hasImages = finalHomeImages.isNotEmpty() || finalLockImages.isNotEmpty()
-            Log.d("MyWallpaperService", "in onVisibilityChanged $visible hasImages $hasImages")
+            AppLogger.d("MyWallpaperService", "in onVisibilityChanged $visible hasImages $hasImages")
             if (visible && hasImages) {
                 loadImagesByCategory() // Reload data just in case settings changed
                 drawFrame()
@@ -378,7 +386,7 @@ class MyWallpaperService : WallpaperService() {
          * Safely attempts to call the new Android 14 API method (API 34+).
          */
         private fun safeUpdateWallpaperFlags() {
-            Log.d("MyWallpaperService", "in safeUpdateWallpaperFlags")
+
             // Set both home and lock screen wallpapers
             currentWallpaperFlags = WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK
             // Note: getWallpaperFlags() is only reliable in a full, running engine,
@@ -389,16 +397,16 @@ class MyWallpaperService : WallpaperService() {
                 currentWallpaperFlags = getWallpaperFlags()
             } catch (e: NullPointerException) {
                 // Log the error but continue. This handles the internal framework bug.
-                Log.e("MyLiveEngine", "NPE on getWallpaperFlags() in API 34+!", e)
+                AppLogger.e("MyLiveEngine", "NPE on getWallpaperFlags() in API 34+!", e)
                 // Fallback: Assume both screens or use the previous flag state
                 currentWallpaperFlags = WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK
             }
             //}
-            Log.d("MyLiveEngine", "Updated wallpaper flags to: $currentWallpaperFlags")
+            AppLogger.d("MyLiveEngine", "Updated wallpaper flags to: $currentWallpaperFlags")
         }
 
         override fun onSurfaceDestroyed(holder: SurfaceHolder) {
-            Log.d("MyWallpaperService", "in onSurfaceDestroyed")
+            AppLogger.d("MyWallpaperService", "in onSurfaceDestroyed")
             this.visible = false
             handler.removeCallbacks(drawRunner)
             offsetResetTask?.let { handler.removeCallbacks(it) }
@@ -407,9 +415,9 @@ class MyWallpaperService : WallpaperService() {
             {
                 try {
                     wallpaperManager?.forgetLoadedWallpaper()
-                    Log.d("WallpaperService", "Cleared wallpaper cache in onSurfaceDestroyed")
+                    AppLogger.d("WallpaperService", "Cleared wallpaper cache in onSurfaceDestroyed")
                 } catch (e: Exception) {
-                    Log.e("WallpaperService", "Error clearing wallpaper: ${e.message}", e)
+                    AppLogger.e("WallpaperService", "Error clearing wallpaper: ${e.message}", e)
                 }
             }
             super.onSurfaceDestroyed(holder)
@@ -423,18 +431,18 @@ class MyWallpaperService : WallpaperService() {
             this.height = height
             // IMPORTANT: Reload data here to catch settings changes when surface recreates (e.g., orientation change)
             loadImagesByCategory()
-            Log.d("MyWallpaperService", "in onSurfaceChanged")
+            AppLogger.d("MyWallpaperService", "in onSurfaceChanged")
             super.onSurfaceChanged(holder, format, width, height)
         }
 
         // --- KEY IMPLEMENTATION FOR HOME SCREEN DETECTION ---
         override fun onOffsetsChanged(xOffset: Float, yOffset: Float, xStep: Float, yStep: Float, xPixels: Int, yPixels: Int) {
             super.onOffsetsChanged(xOffset, yOffset, xStep, yStep, xPixels, yPixels)
-            Log.d("MyWallpaperService", "in onOffsetsChanged")
+
             // 1. Set the flag: We are definitely interacting with or viewing the Home Screen.
             if (!isHomeVisibleByOffset) {
                 isHomeVisibleByOffset = true
-                Log.d("WP_OFFSET", "Offset change started. isHomeVisibleByOffset=true")
+                AppLogger.d("WP_OFFSET", "Offset change started. isHomeVisibleByOffset=true")
             }
 
             // 2. Clear any pending reset task.
@@ -444,7 +452,7 @@ class MyWallpaperService : WallpaperService() {
             // ensuring the flag is reset quickly after scrolling stops.
             offsetResetTask = Runnable {
                 isHomeVisibleByOffset = false
-                Log.d("WP_OFFSET", "Offset reset timeout (100ms). isHomeVisibleByOffset=false")
+                AppLogger.d("WP_OFFSET", "Offset reset timeout (100ms). isHomeVisibleByOffset=false")
             }
             handler.postDelayed(offsetResetTask!!, OFFSET_RESET_DELAY)
         }
@@ -541,99 +549,7 @@ class MyWallpaperService : WallpaperService() {
             return BitmapFactory.decodeFile(imageFile.absolutePath)
         }
 
-        /*private fun drawImage(canvas: Canvas) {
-            canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
-            // Toast.makeText(applicationContext, imagesArrayIndex.toString()+"....kkkkkkk...."+imagesArray.size.toString(), Toast.LENGTH_LONG).show()
-            if (imagesArrayIndex < imagesArray.size) {
 
-                try {
-
-                    val inputStream = applicationContext.contentResolver.openInputStream(Uri.parse(imagesArray[imagesArrayIndex]))
-                    var image: Bitmap = BitmapFactory.decodeStream(inputStream)
-                    inputStream?.close()
-
-                    if (image == null) {
-                        Log.e("MyWallpaperService", "Failed to decode image at index $imagesArrayIndex")
-                        canvas.drawColor(Color.BLACK) // Default background
-                        return
-                    }
-
-                    width = display?.width ?: 0
-                    height = display?.height ?: 0
-                    val imageVerticalAspectRatio: Int
-                    val imageHorizontalAspectRatio: Int
-                    var bestFitScalingFactor = 0f
-                    val percesionValue = 0.2.toFloat()
-
-                    //getAspect Ratio of Image
-                    val imageHeight = (Math.ceil(image.height.toDouble() / 100) * 100).toInt()
-                    val imageWidth = (Math.ceil(image.width.toDouble() / 100) * 100).toInt()
-                    val GCD = BigInteger.valueOf(imageHeight.toLong())
-                        .gcd(BigInteger.valueOf(imageWidth.toLong())).toInt()
-                    imageVerticalAspectRatio = imageHeight / GCD
-                    imageHorizontalAspectRatio = imageWidth / GCD
-
-                    //getContainer Dimensions
-                    val displayWidth: Int = width
-                    val displayHeight: Int = height
-
-                    val leftMargin = 0
-                    val rightMargin = 0
-                    val topMargin = 0
-                    val bottomMargin = 0
-                    val containerWidth = displayWidth - (leftMargin + rightMargin)
-                    val containerHeight = displayHeight - (topMargin + bottomMargin)
-
-                    //iterate to get bestFitScaleFactor per constraints
-                    while (imageHorizontalAspectRatio * bestFitScalingFactor <= containerWidth &&
-                        imageVerticalAspectRatio * bestFitScalingFactor <= containerHeight) {
-                        bestFitScalingFactor += percesionValue
-                    }
-
-                    //return bestFit bitmap
-                    val bestFitHeight = (imageVerticalAspectRatio * bestFitScalingFactor).toInt()
-                    val bestFitWidth = (imageHorizontalAspectRatio * bestFitScalingFactor).toInt()
-
-                    image = Bitmap.createScaledBitmap(image, bestFitWidth, bestFitHeight, true)
-
-                    //Position the bitmap centre of the container
-                    val leftPadding = ((containerWidth - image.width) / 2).toFloat()
-                    val topPadding = ((containerHeight - image.height) / 2).toFloat()
-                    val backDrop =
-                        Bitmap.createBitmap(containerWidth, containerHeight, Bitmap.Config.RGB_565)
-
-
-                    var can = canvas
-                    can = Canvas(backDrop)
-                    //can.drawColor(Color.BLACK)
-                    can.drawColor(ContextCompat.getColor(applicationContext, R.color.purple_200))
-                    can.drawBitmap(image, leftPadding, topPadding, null)
-                    canvas.drawBitmap(backDrop, 0f, 0f, null)
-
-
-                    if(imagesArrayIndex == 0) {
-
-                       // val wallpaperMgr = WallpaperManager.getInstance(baseContext)
-                        //val lockScreenWallpaperFile = wallpaperMgr.getWallpaperId(WallpaperManager.FLAG_LOCK)
-                        //Log.i("TAGGGGG....", "flagfile: $lockScreenWallpaperFile")
-                       // wallpaperMgr.setBitmap(backDrop, null, true, WallpaperManager.FLAG_LOCK)
-                    }
-
-                    } catch (e: Exception) {
-
-                    Log.e("MyWallpaperService", "Error drawing image at index $imagesArrayIndex: ${e.message}", e)
-                    canvas.drawColor(ContextCompat.getColor(applicationContext, R.color.purple_200))
-                    }
-
-
-            }
-            else {
-                Log.w("MyWallpaperService", "No images to draw, using default background")
-                canvas.drawColor(ContextCompat.getColor(applicationContext, R.color.purple_200)) // Default background
-            }
-            }
-
-        */
         /**
          * Draws the current image from the imagesArray onto the provided Canvas,
          * scaling it to fit within the canvas dimensions while maintaining its aspect ratio,
@@ -646,7 +562,7 @@ class MyWallpaperService : WallpaperService() {
             // previous drawings are removed before drawing the new frame.
             canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
 
-            Log.d("Wallpaperservice","drawImage index:$index,imageList.size:${imageList.size}")
+            AppLogger.d("Wallpaperservice","drawImage index:$index,imageList.size:${imageList.size}")
             // Step 2: Check if there are images available and if the current index is valid.
             if (index < imageList.size) {
                 try {
@@ -661,7 +577,7 @@ class MyWallpaperService : WallpaperService() {
 
                     // Step 5: Handle cases where the image decoding fails (e.g., corrupted file, invalid URI).
                     if (image == null) {
-                        Log.e("MyWallpaperService", "Failed to decode image at index $imagesArrayIndex. URI: $imageUri")
+                        AppLogger.e("MyWallpaperService", "Failed to decode image at index $imagesArrayIndex. URI: $imageUri")
                         // Fallback: draw a black background to indicate an error.
                         canvas.drawColor(ContextCompat.getColor(applicationContext, R.color.purple_200))
                         return // Exit the function as there's no image to draw.
@@ -669,8 +585,14 @@ class MyWallpaperService : WallpaperService() {
 
                     // Step 6: Get the dimensions of the canvas (the drawing surface).
                     // These are the target dimensions for fitting the image.
-                    val canvasWidth = canvas.width
-                    val canvasHeight = canvas.height
+
+                    var canvasWidth = canvas.width
+                    var canvasHeight = canvas.height
+
+                    val imageRatio = image.width.toFloat() / image.height
+                    val canvasRatio = canvas.width.toFloat() / canvas.height
+                    val ratioDiff = kotlin.math.abs(imageRatio - canvasRatio)
+                    val useCover = ratioDiff < 0.35f
 
                     // Step 7: Calculate the scaling factors.
                     // We determine how much to scale the image to fill its width or height
@@ -678,16 +600,30 @@ class MyWallpaperService : WallpaperService() {
                     val scaleX = canvasWidth.toFloat() / image.width.toFloat()
                     val scaleY = canvasHeight.toFloat() / image.height.toFloat()
 
+                    val maxCrop = 1.25f
+                    val coverScale = max(scaleX, scaleY)
+                    val containScale = min(scaleX, scaleY)
+
+                    val scale = min(coverScale, containScale * maxCrop)
+
                     // Step 8: Determine the overall scaling factor for 'cover' behavior.
                     // To make the image cover the entire canvas, we use the LARGER of the
                     // two scaling factors (scaleX or scaleY). This will ensure that at least
                     // one dimension (width or height) of the scaled image matches the canvas,
                     // and the other will be larger, allowing for cropping.
-                    val scaleFactor = max(scaleX, scaleY) // Changed from min to max
-
+                    /*val scaleFactor = if (useCover) {
+                        max(scaleX, scaleY)
+                    }
+                    else{
+                        min(scaleX, scaleY)
+                    }*/
+                    val scaleFactor = max(scaleX, scaleY)
                     // Step 9: Calculate the new dimensions of the image after scaling.
                     val scaledWidth = (image.width * scaleFactor).toInt()
                     val scaledHeight = (image.height * scaleFactor).toInt()
+
+                    //val scaledWidth = (image.width * scale).toInt()
+                    //val scaledHeight = (image.height * scale).toInt()
 
                     // Step 10: Create a new scaled Bitmap.
                     // `createScaledBitmap` will return a new Bitmap, and the original `image`
@@ -707,126 +643,40 @@ class MyWallpaperService : WallpaperService() {
                     // Step 13: Draw the scaled and centered image onto the canvas.
                     canvas.drawBitmap(image, leftPadding, topPadding, null)
 
-                    // IMPORTANT NOTE: The commented-out WallpaperManager code below
-                    // should generally NOT be placed within a `draw` function of a live wallpaper.
-                    // Setting the wallpaper is a heavy operation and should not occur on every
-                    // frame rendering. If you intend to set the lock screen wallpaper, it should
-                    // be triggered by a specific event (e.g., user action, service creation)
-                    // and probably in an asynchronous manner.
-                    /*
-                    if (imagesArrayIndex == 0) {
-                        // val wallpaperMgr = WallpaperManager.getInstance(baseContext)
-                        // wallpaperMgr.setBitmap(backDrop, null, true, WallpaperManager.FLAG_LOCK)
-                    }
-                    */
+
 
                 } catch (e: Exception) {
                     // Step 14: Catch and log any exceptions that occur during the image processing.
-                    Log.e("MyWallpaperService", "Error drawing image at index $index: ${e.message}", e)
+                    AppLogger.e("MyWallpaperService", "Error drawing image at index $index: ${e.message}", e)
                     // Fallback: draw a default background color on error to prevent a blank screen.
                     canvas.drawColor(ContextCompat.getColor(applicationContext, R.color.purple_200))
                 }
             } else {
                 // Step 15: If there are no images in the array or the index is out of bounds,
                 // log a warning and draw a default background.
-                Log.w("MyWallpaperService", "No images to draw or imagesArrayIndex out of bounds. Using default background.")
+                AppLogger.w("MyWallpaperService", "No images to draw or imagesArrayIndex out of bounds. Using default background.")
                 canvas.drawColor(ContextCompat.getColor(applicationContext, R.color.purple_200))
             }
         }
 
 
-        /* @SuppressLint("SuspiciousIndentation")
-         private fun drawFrame() {
-            if (!visible || imagesArray.isEmpty()) {
-                 Log.w("WallpaperService", "Skipping draw: visible=$visible, images=${imagesArray.size}")
-                 return
-             }
-             if(!iswallpaperSet() && !isPreview)
-             {
 
-                 sendMessage(WallpaperForegroundService.MSG_REMOVE_NOTIFICATION)
-                 stopForeground(true)
-                 stopSelf()
-             }
-             if(iswallpaperSet() && !isPreview)
-             {
-                 Log.i("WallpaperService", "stopping both")
-                 sendMessage(WallpaperForegroundService.MSG_SHOW_NOTIFICATION)
-
-                 //stopForeground(true)
-                 stopSelf()
-             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE){
-             val flagval = getWallpaperFlags()
-                 if(flagval==1)
-                 {
-                     val backDrop =
-                         Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
-                     val wallpaperMgr = WallpaperManager.getInstance(baseContext)
-                     wallpaperMgr.setBitmap(backDrop, null, true, WallpaperManager.FLAG_LOCK)
-
-                 }
-
-                // Log.i("TAGGGGG....", "flagval: $flagval")
-             } else {
-                 Toast.makeText(
-                     applicationContext,
-                     "Wallpaper slider not supported!",
-                     Toast.LENGTH_SHORT
-                 ).show()
-
-
-             }
-
-             val holder: SurfaceHolder = surfaceHolder
-
-             var canvas: Canvas? = null
-             try {
-                 canvas = holder.lockCanvas()
-                 if (canvas != null) {
-                    // Toast.makeText(applicationContext, "111 set!", Toast.LENGTH_SHORT).show()
-                     if(imagesArrayIndex >= imagesArray.size)
-                     {
-                         imagesArrayIndex = 0
-                     }
-
-                         drawImage(canvas)
-                         imagesArrayIndex++
-
-                 }
-             } finally {
-                 if (canvas != null) {
-                     try {
-                         holder.unlockCanvasAndPost(canvas)
-                     } catch (e: Exception) {
-                         Log.e("WallpaperService", "Error unlocking canvas: ${e.message}", e)
-                     }
-                 }
-             }
-
-
-             handler.removeCallbacks(drawRunner)
-             if (visible && imagesArray.isNotEmpty()) {
-                 handler.postDelayed(drawRunner, slideDuration.toLong())
-             }
-
-         }*/
 
         @SuppressLint("SuspiciousIndentation")
         private fun drawFrame() {
-            Log.d("Wallpaperservice","drawFrame")
+            AppLogger.d("Wallpaperservice","drawFrame")
             safeUpdateWallpaperFlags() // Get the most current flags before drawing
             // Check which display context the engine is active for
             val prefs = getSharedPreferences("previewwall", Context.MODE_PRIVATE)
             var previewwall = prefs.getString("previewwall", "all")
-            //Log.d("WallpaperService", "previewwall val $previewwall")
+
 
             var targetList: List<String> = emptyList()
             var currentIndex: Int = -1
             var targetIndexRef: String? = null // Used to track which index variable to advance
 
             if (isPreview()) {
-                Log.i("WP_SCREEN", "Active Screen: PREVIEW MODE (Preference-based)")
+                AppLogger.i("WP_SCREEN", "Active Screen: PREVIEW MODE (Preference-based)")
 
 
                 when (previewwall) {
@@ -834,14 +684,14 @@ class MyWallpaperService : WallpaperService() {
                         targetList = finalLockImages
                         currentIndex = lockSlideIndex
                         targetIndexRef = "LOCK"
-                        Log.d("WP_SCREEN", "Previewing LOCK screen.")
+                        AppLogger.d("WP_SCREEN", "Previewing LOCK screen.")
                     }
 
                     "home" -> {
                         targetList = finalHomeImages
                         currentIndex = homeSlideIndex
                         targetIndexRef = "HOME"
-                        Log.d("WP_SCREEN", "Previewing HOME screen.")
+                        AppLogger.d("WP_SCREEN", "Previewing HOME screen.")
                     }
 
                     "all" -> {
@@ -851,14 +701,14 @@ class MyWallpaperService : WallpaperService() {
                             targetList = finalHomeImages
                             currentIndex = homeSlideIndex
                             targetIndexRef = "HOME"
-                            Log.d("WP_SCREEN", "Previewing ALL/Default to HOME screen.")
+                            AppLogger.d("WP_SCREEN", "Previewing ALL/Default to HOME screen.")
                         }
                         else
                         {
                             targetList = finalLockImages
                             currentIndex = lockSlideIndex
                             targetIndexRef = "LOCK"
-                            Log.d("WP_SCREEN", "Previewing ALL/Default to LOCK screen.")
+                            AppLogger.d("WP_SCREEN", "Previewing ALL/Default to LOCK screen.")
                         }
                     }
 
@@ -874,43 +724,38 @@ class MyWallpaperService : WallpaperService() {
                 val isSetToSystem = (currentWallpaperFlags and WallpaperManager.FLAG_SYSTEM) != 0
                 val isSetToLock = (currentWallpaperFlags and WallpaperManager.FLAG_LOCK) != 0
 
-                Log.d("WallpaperService", "isSetToLock $isSetToLock   isSetToSystem $isSetToSystem")
+                AppLogger.d("WallpaperService", "isSetToLock $isSetToLock   isSetToSystem $isSetToSystem")
                 val isDeviceLocked = try {
                     keyguardManager.isDeviceLocked || keyguardManager.isKeyguardLocked
                 } catch (e: Exception) {
                     // Handle cases where KeyguardManager is not accessible (e.g., specific Android variants)
-                    Log.e("WP_SCREEN", "Error checking KeyguardManager", e)
+                    AppLogger.e("WP_SCREEN", "Error checking KeyguardManager", e)
                     false
                 }
-                //val isHomeActive = currentWallpaperFlags and WallpaperManager.FLAG_SYSTEM != 0
-                //val isLockFlagActive = currentWallpaperFlags and WallpaperManager.FLAG_LOCK != 0
-                //val isSystemFlagActive = currentWallpaperFlags and WallpaperManager.FLAG_SYSTEM != 0
-
-
-                // If the wallpaper is set to "Both" (meaning both flags are true), the Home List will be used.
-                // This allows your Home Screen to cycle through its two images again.
+                /*
                 if (isSetToLock && isDeviceLocked && finalLockImages.isNotEmpty()) {
-                    //if (isDeviceLocked && finalLockImages.isNotEmpty()) {
-                    targetList = finalLockImages
+                     targetList = finalLockImages
                     currentIndex = lockSlideIndex
                     targetIndexRef = "LOCK"
                     Log.i("WP_SCREEN", "Active Screen: LOCK (Keyguard Manager Check)")
                 }
-                // Priority 2: Home Screen (Confirmed by Active Interaction: Scrolling)
+                else if (isSetToSystem && !isSetToLock && finalHomeImages.isNotEmpty() && finalLockImages.isEmpty()) {
+                    targetList = finalHomeImages
+                    currentIndex = homeSlideIndex
+                    targetIndexRef = "HOME"
+                    Log.i("WP_SCREEN", "Active Screen: HOME ONLY (Using Home List)")
+                }
                 else if (isSetToSystem && isHomeVisibleByOffset && finalHomeImages.isNotEmpty()) {
-                    //else if (isHomeVisibleByOffset && finalHomeImages.isNotEmpty()) {
                     targetList = finalHomeImages
                     currentIndex = homeSlideIndex
                     targetIndexRef = "HOME"
                     Log.i("WP_SCREEN", "Active Screen: HOME (Offset Active)")
                 } else if (isSetToSystem && finalHomeImages.isNotEmpty()) {
-                    //else if (finalHomeImages.isNotEmpty()) {
                     targetList = finalHomeImages
                     currentIndex = homeSlideIndex
                     targetIndexRef = "HOME"
                     Log.i("WP_SCREEN", "Active Screen: HOME (Final Default)")
                 } else if (isSetToSystem && finalHomeImages.isEmpty() && finalLockImages.isNotEmpty()) {
-                    //else if (finalHomeImages.isNotEmpty()) {
                     targetList = finalLockImages
                     currentIndex = lockSlideIndex
                     targetIndexRef = "LOCK"
@@ -919,11 +764,55 @@ class MyWallpaperService : WallpaperService() {
                     Log.w("WallpaperService", "No active screen or image lists found. Stopping runner.")
                     handler.removeCallbacks(drawRunner)
                     return
+                }*/
+                when {
+                    // 1. LOCK SCREEN PRIORITY: Highest priority, ONLY if the device is locked
+                    //    AND we actually have images for the Lock Screen.
+                    isDeviceLocked && isSetToLock && finalLockImages.isNotEmpty() -> {
+                        targetList = finalLockImages
+                        currentIndex = lockSlideIndex
+                        targetIndexRef = "LOCK"
+                        AppLogger.i("WP_SCREEN", "Active Screen: LOCK (Device Locked)")
+                    }
+
+                    // 2. HOME SCREEN PRIORITY: Use Home list if we are not locked OR
+                    //    if the service is running for the Home Screen and we have Home images.
+                    isSetToSystem && finalHomeImages.isNotEmpty() -> {
+                        if (isHomeVisibleByOffset) {
+                            // Priority 2a: Home Screen with active interaction (Scrolling)
+                            targetList = finalHomeImages
+                            currentIndex = homeSlideIndex
+                            targetIndexRef = "HOME"
+                            AppLogger.i("WP_SCREEN", "Active Screen: HOME (Offset Active)")
+                        } else {
+                            // Priority 2b: Home Screen Default (unlocked, static view)
+                            targetList = finalHomeImages
+                            currentIndex = homeSlideIndex
+                            targetIndexRef = "HOME"
+                            AppLogger.i("WP_SCREEN", "Active Screen: HOME (Default View)")
+                        }
+                    }
+
+                    // 3. FALLBACK: If we passed 1 & 2, but the Lock flag is set and we have Lock images,
+                    //    use the Lock list (covers Lock-Only case when unlocked, but only if Home list is empty).
+                    isSetToLock && finalLockImages.isNotEmpty() -> {
+                        targetList = finalLockImages
+                        currentIndex = lockSlideIndex
+                        targetIndexRef = "LOCK"
+                        AppLogger.i("WP_SCREEN", "Active Screen: LOCK (Fallback/Home List Empty)")
+                    }
+
+                    // 4. FINAL FAILURE: No lists or contexts match
+                    else -> {
+                        AppLogger.w("WallpaperService", "No active screen or image lists found. Stopping runner.")
+                        handler.removeCallbacks(drawRunner)
+                        return
+                    }
                 }
             }
 
             if (!visible || targetList.isEmpty()) {
-                Log.w("WallpaperService", "Skipping draw: visible=$visible, target list empty.")
+                AppLogger.w("WallpaperService", "Skipping draw: visible=$visible, target list empty.")
                 handler.removeCallbacks(drawRunner)
                 return
             }
@@ -933,6 +822,7 @@ class MyWallpaperService : WallpaperService() {
             try {
                 canvas = holder.lockCanvas()
                 if (canvas != null) {
+
                     // Draw the image using the dynamically selected list and index
                     drawImage(canvas, targetList, currentIndex)
                 }
@@ -943,16 +833,16 @@ class MyWallpaperService : WallpaperService() {
                         when (targetIndexRef) {
                             "LOCK" -> {
                                 lockSlideIndex = (lockSlideIndex + 1) % finalLockImages.size
-                                Log.d("WallpaperService", "Lock index advanced to $lockSlideIndex")
+                                AppLogger.d("WallpaperService", "Lock index advanced to $lockSlideIndex")
                             }
                             "HOME" -> {
                                 homeSlideIndex = (homeSlideIndex + 1) % finalHomeImages.size
-                                Log.d("WallpaperService", "Home index advanced to $homeSlideIndex")
+                                AppLogger.d("WallpaperService", "Home index advanced to $homeSlideIndex")
                             }
                             else -> {}
                         }
                     } catch (e: Exception) {
-                        Log.e("WallpaperService", "Error unlocking canvas or advancing index: ${e.message}", e)
+                        AppLogger.e("WallpaperService", "Error unlocking canvas or advancing index: ${e.message}", e)
                     }
                 }
             }
@@ -974,9 +864,9 @@ class MyWallpaperService : WallpaperService() {
             extras: Bundle?,
             resultRequested: Boolean
         ): Bundle? {
-            Log.d("WallpaperService", "onCommand called with action: $action, isPreview: $isPreview")
+            AppLogger.d("WallpaperService", "onCommand called with action: $action, isPreview: $isPreview")
             if (action == "wallpaper_set") {
-                Log.d("WallpaperService", "Wallpaper set command received")
+                AppLogger.d("WallpaperService", "Wallpaper set command received")
                 if (isPreview()) {
                     // Stop drawing and clean up preview engine
                     handler.removeCallbacks(drawRunner)
@@ -984,16 +874,17 @@ class MyWallpaperService : WallpaperService() {
                     isHomeVisibleByOffset = false
                     try {
                         wallpaperManager?.forgetLoadedWallpaper()
-                        Log.d("WallpaperService", "Cleared wallpaper cache")
+                        AppLogger.d("WallpaperService", "Cleared wallpaper cache")
                     } catch (e: Exception) {
-                        Log.e("WallpaperService", "Error clearing wallpaper: ${e.message}", e)
+                        AppLogger.e("WallpaperService", "Error clearing wallpaper: ${e.message}", e)
                     }
                     // Force preview engine to stop
                     visible = false
                     notifyWallpaperSet()
 
                 }
-                else{
+                else
+                {
                     sendMessage(WallpaperForegroundService.MSG_SHOW_NOTIFICATION)
                 }
             }
@@ -1002,13 +893,13 @@ class MyWallpaperService : WallpaperService() {
 
         // Helper to notify system of wallpaper change
         private fun notifyWallpaperSet() {
-            Log.d("Wallpaperservice","notifyWallpaperSet")
+
             try {
                 val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
                 applicationContext.sendBroadcast(intent)
-                Log.d("WallpaperService", "Broadcast ACTION_WALLPAPER_CHANGED")
+                AppLogger.d("WallpaperService", "Broadcast ACTION_WALLPAPER_CHANGED")
             } catch (e: Exception) {
-                Log.e("WallpaperService", "Error broadcasting wallpaper change: ${e.message}", e)
+                AppLogger.e("WallpaperService", "Error broadcasting wallpaper change: ${e.message}", e)
             }
         }
 

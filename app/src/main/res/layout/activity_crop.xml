@@ -7,6 +7,20 @@
     android:background="@drawable/splash_gradient"
     android:fitsSystemWindows="true">
 
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guide_start"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.05" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guide_end"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.95" />
+
     <!-- Toolbar -->
     <include
         android:id="@+id/xml_toolbar"
@@ -14,19 +28,17 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:elevation="4dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <!-- Image Container -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/cl_imageContainer"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintTop_toBottomOf="@id/xml_toolbar"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/cl_buttonContainer"
+        app:layout_constraintStart_toStartOf="@id/guide_start"
+        app:layout_constraintEnd_toEndOf="@id/guide_end"
         app:layout_constrainedHeight="true">
 
         <!-- CropImageView -->
@@ -73,7 +85,7 @@
         android:layout_marginEnd="@dimen/margin_16dp"
         android:layout_marginBottom="@dimen/margin_16dp"
         app:layout_constraintBottom_toTopOf="@id/cl_buttonContainer"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toEndOf="@id/guide_end"
         android:elevation="8dp">
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -132,9 +144,10 @@
     <!-- Button Container (Bottom of Screen) -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/cl_buttonContainer"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:padding="@dimen/margin_16dp"
+        app:layout_constraintWidth_max="700dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -145,14 +158,9 @@
             android:id="@+id/cancel_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/margin_16dp"
             android:text="@string/cancel"
-            android:textSize="@dimen/text_size_button"
-            android:padding="12dp"
             android:contentDescription="@string/desc_cancel"
-            app:cornerRadius="@dimen/button_radius"
-            app:backgroundTint="@color/purple_100"
-            style="@style/Widget.Material3.Button.ElevatedButton"
+            style="@style/AppButton.Primary"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -163,17 +171,10 @@
             android:id="@+id/crop_image"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="@dimen/margin_16dp"
             android:text="@string/select_image"
-            android:textSize="@dimen/text_size_button"
-            android:padding="12dp"
             android:contentDescription="@string/desc_crop_image"
             app:icon="@drawable/crop_btn"
-            app:iconGravity="start"
-            app:iconPadding="8dp"
-            app:cornerRadius="@dimen/button_radius"
-            app:backgroundTint="@color/purple_100"
-            style="@style/Widget.Material3.Button.ElevatedButton"
+            style="@style/AppButton.Primary"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -184,14 +185,9 @@
             android:id="@+id/save_image"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="@dimen/margin_16dp"
             android:text="@string/save_image"
-            android:textSize="@dimen/text_size_button"
-            android:padding="12dp"
             android:contentDescription="@string/desc_save_image"
-            app:cornerRadius="@dimen/button_radius"
-            app:backgroundTint="@color/purple_100"
-            style="@style/Widget.Material3.Button.ElevatedButton"
+            style="@style/AppButton.Primary"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"

@@ -8,50 +8,68 @@
     android:background="@drawable/splash_gradient"
     tools:context=".MainActivity">
 
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guide_left"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.08" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guide_right"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.92" />
+
     <!-- Welcome Text -->
     <TextView
         android:id="@+id/welcome_text"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Wallpaper Slider"
-        android:textSize="28sp"
+        android:text="@string/welcome_text"
+        android:textAlignment="center"
+        android:textSize="30sp"
         android:textColor="@color/blue_200"
         android:fontFamily="sans-serif-medium"
         android:layout_marginBottom="8dp"
         app:layout_constraintBottom_toTopOf="@id/subtitle_text"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@id/guide_left"
+        app:layout_constraintEnd_toEndOf="@id/guide_right"
         android:background="@null"/>
 
     <!-- Subtitle TextView -->
     <TextView
         android:id="@+id/subtitle_text"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Long press and select 2 or more images to slide"
+        android:text="@string/subtitle_text"
+        android:textAlignment="center"
         android:textColor="@color/blue_200"
-        android:textSize="12sp"
+        android:textSize="14sp"
         android:fontFamily="sans-serif"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="20dp"
         android:contentDescription="Subtitle: Explore our features"
         app:layout_constraintBottom_toTopOf="@id/logoimg"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@id/guide_left"
+        app:layout_constraintEnd_toEndOf="@id/guide_right"
         android:background="@null"/>
 
     <!-- App Logo -->
     <ImageView
         android:id="@+id/logoimg"
-        android:layout_width="240dp"
-        android:layout_height="240dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:src="@drawable/image"
         android:contentDescription="App logo"
-        android:scaleType="centerInside"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintWidth_percent="0.6"
+        app:layout_constraintWidth_max="320dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/fitscreenicon"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintVertical_bias="0.5" />
+        app:layout_constraintVertical_bias="0.45" />
 
     <!-- Login Button with Icon -->
     <com.google.android.material.button.MaterialButton
@@ -59,21 +77,16 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginEnd="8dp"
-        android:layout_marginBottom="32dp"
+        android:layout_marginBottom="40dp"
         android:text="Add Image"
-        android:textSize="16sp"
-        android:padding="16dp"
         android:contentDescription="Add Image to Slide"
         app:icon="@drawable/baseline_add_a_photo_24"
-        app:iconGravity="start"
-        app:iconPadding="8dp"
-        app:layout_constraintWidth_percent="0.4"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintWidth_max="250dp"
+        app:layout_constraintHorizontal_chainStyle="packed"
+        app:layout_constraintStart_toStartOf="@id/guide_left"
         app:layout_constraintEnd_toStartOf="@id/cropscreenicon"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:cornerRadius="12dp"
-        app:backgroundTint="@color/purple_100"
-        style="@style/Widget.Material3.Button.ElevatedButton" />
+        style="@style/AppButton.Primary" />
 
     <!-- Sign Up Button with Icon -->
     <com.google.android.material.button.MaterialButton
@@ -81,20 +94,14 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
-        android:layout_marginBottom="32dp"
+        android:layout_marginBottom="40dp"
         android:text="My Images"
-        android:textSize="16sp"
-        android:padding="16dp"
         android:contentDescription="Collection of My Images"
         app:icon="@drawable/baseline_collections_24"
-        app:iconGravity="start"
-        app:iconPadding="8dp"
-        app:layout_constraintWidth_percent="0.4"
+        app:layout_constraintWidth_max="250dp"
         app:layout_constraintStart_toEndOf="@id/fitscreenicon"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toEndOf="@id/guide_right"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:cornerRadius="12dp"
-        app:backgroundTint="@color/purple_100"
-        style="@style/Widget.Material3.Button.ElevatedButton" />
+        style="@style/AppButton.Primary" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

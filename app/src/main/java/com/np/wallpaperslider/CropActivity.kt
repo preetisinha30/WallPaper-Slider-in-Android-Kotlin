@@ -56,6 +56,7 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
     private lateinit var filename: String
     private val TAG = "CropActivity"
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_crop)
@@ -65,7 +66,7 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
         toolbar.title = "Crop Image"
         toolbar.setNavigationIcon(R.drawable.ic_back_arrow)
         toolbar.setNavigationOnClickListener {
-            val intent = Intent(applicationContext, RViewActivity::class.java)
+            val intent = Intent(applicationContext, RGrid::class.java)
             startActivity(intent)
             finishAndRemoveTask()
         }
@@ -109,7 +110,7 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
         val maxImageHeight = screenHeight * 0.8f // Use 80% of screen height for image
         val maxHeight = (maxImageHeight * displayMetrics.density).toInt()
         cl_imageContainer.maxHeight = maxHeight
-        Log.d(TAG, "Screen height: $screenHeight dp, Max image height: $maxImageHeight dp, Container maxHeight: $maxHeight px")
+        AppLogger.d(TAG, "Screen height: $screenHeight dp, Max image height: $maxImageHeight dp, Container maxHeight: $maxHeight px")
 
         // Load image array and index
         //imagesArray = loadArray("imagesPathList", applicationContext)
@@ -145,9 +146,51 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
             val imageUri = imageItem.imagePath.toUri()
 
             filename = imageUri.lastPathSegment?.takeIf { it.isNotBlank() } ?: "image_${System.currentTimeMillis()}"
+
             val displayMetrics = resources.displayMetrics
-            val targetWidth = displayMetrics.widthPixels
-            val targetHeight = (cl_imageContainer.maxHeight / displayMetrics.density).toInt()
+            val targetWidth = (displayMetrics.widthPixels/1.5).toInt()
+            val targetHeight = displayMetrics.heightPixels//(cl_imageContainer.maxHeight / displayMetrics.density).toInt()
+            val targetRatio = targetWidth.toFloat() / targetHeight.toFloat()
+            AppLogger.d(TAG, "Displaymetrics: ${targetWidth}x${targetHeight}")
+            val ratio_9_21:Float = 0.4285F
+            val ratio_9_19:Float = 0.4736F
+            val ratio_9_16: Float  = 0.5625F;
+            // 4:5 (0.8) - PORTRAIT FEED
+            val ratio_4_5:Float = 0.8F;
+            // 16:9 (1.777...) - LANDSCAPE
+            val ratio_16_9:Float = 1.7778F;
+            var cropRatio:CropImageView.CropMode = CropImageView.CropMode.RATIO_FREE
+            AppLogger.d(TAG, "Displaymetrics: ${targetRatio}")
+            val standardRatios = mapOf(
+                CropImageView.CropMode.RATIO_9_21 to ratio_9_21,
+                CropImageView.CropMode.RATIO_9_19 to ratio_9_19,
+                CropImageView.CropMode.RATIO_9_16 to ratio_9_16,
+                CropImageView.CropMode.RATIO_4_5 to ratio_4_5,
+                CropImageView.CropMode.RATIO_16_9 to ratio_16_9 // Include landscape for completeness
+            )
+            var closestRatioDifference = Float.MAX_VALUE
+            var closestCropMode = CropImageView.CropMode.RATIO_FREE
+
+            for ((mode, ratioValue) in standardRatios) {
+                val difference = Math.abs(targetRatio - ratioValue)
+                AppLogger.d(TAG, "Displaymetrics difference: ${difference}")
+                // Check if the current standard ratio is a better fit (smaller difference)
+                if (difference < closestRatioDifference) {
+                    closestRatioDifference = difference
+                    AppLogger.d(TAG, "Displaymetrics closestRatioDifference: ${closestRatioDifference}")
+                    closestCropMode = mode
+                }
+            }
+            cropRatio = closestCropMode
+            AppLogger.d(TAG, "Displaymetrics cropRatio: ${cropRatio}")
+            // Landscape Check (Simplified)
+            if (displayMetrics.widthPixels > displayMetrics.heightPixels) {
+                // If the screen is wide, override to the standard video format if it's the closest.
+                if (closestCropMode != CropImageView.CropMode.RATIO_16_9) {
+                    // This assumes 16:9 is the best default for landscape video
+                    cropRatio = CropImageView.CropMode.RATIO_16_9
+                }
+            }
 
             origPic.post {
                 val bitmap = loadScaledBitmap(imageUri, targetWidth, targetHeight)
@@ -155,22 +198,23 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
                     with(origPic) {
                         resetMatrix()
                         // Remove setScale(1.0f) to rely on initLayout's scaling
+                        setTargetWallpaperSize(targetWidth, targetHeight)
                         setRotation(0f)
                         setImageBitmap(bitmap)
-                        setCropMode(CropImageView.CropMode.RATIO_FREE)
+                        setCropMode(cropRatio)
                         setCropEnabled(true)
                         setEnabled(true)
                     }
-                    Log.d(TAG, "Image loaded: ${bitmap.width}x${bitmap.height}")
+                    AppLogger.d(TAG, "Image loaded: ${bitmap.width}x${bitmap.height}")
                     bmp = bitmap
                 } else {
-                    Log.e(TAG, "Failed to load bitmap")
+                    AppLogger.e(TAG, "Failed to load bitmap")
                     showError("Failed to display image")
                 }
                 loading.isDismiss()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error loading image: ${e.message}", e)
+            AppLogger.e(TAG, "Error loading image: ${e.message}", e)
             showError("Failed to load image")
             loading.isDismiss()
         }
@@ -210,15 +254,19 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
                     } else {
                         targetHeight
                     }
+
                     //Bitmap.createScaledBitmap(bitmap, scaledWidth, scaledHeight, true)
                     bitmap.scale(scaledWidth, scaledHeight)
+
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to scale bitmap: ${e.message}", e)
+            AppLogger.e(TAG, "Failed to scale bitmap: ${e.message}", e)
             null
         }
     }
+
+
 
     private fun showError(message: String) {
         Toast.makeText(applicationContext, message, Toast.LENGTH_SHORT).show()
@@ -254,7 +302,7 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
     override fun onClick(v: View) {
         when (v) {
             zoomin -> {
-                Log.d(TAG, "Zoom In button clicked")
+
                 lifecycleScope.launch {
                     try {
                         origPic.zoomIn()
@@ -265,12 +313,12 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
                 }
             }
             zoomout -> {
-                Log.d(TAG, "Zoom Out button clicked")
+
                 lifecycleScope.launch {
                     try {
                         origPic.zoomOut()
                     } catch (e: Exception) {
-                        Log.e(TAG, "Zoom failed: ${e.message}", e)
+                        AppLogger.e(TAG, "Zoom failed: ${e.message}", e)
                         Toast.makeText(this@CropActivity, "Zoom error", Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -287,86 +335,42 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
                 }
             }*/
             cropPic -> {
-                Log.d(TAG, "Crop button clicked")
+
                 try {
                     val cropped = origPic.croppedBitmap
                     if (cropped != null) {
                         imagePic.setImageBitmap(cropped)
                         showAfterCrop()
                     } else {
-                        Log.e(TAG, "Cropped bitmap is null")
+                        AppLogger.e(TAG, "Cropped bitmap is null")
                         Toast.makeText(this, "Failed to crop image", Toast.LENGTH_SHORT).show()
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Crop failed: ${e.message}", e)
+                    AppLogger.e(TAG, "Crop failed: ${e.message}", e)
                     Toast.makeText(this, "Failed to crop image", Toast.LENGTH_SHORT).show()
                 }
             }
             savePic -> {
-                Log.d(TAG, "Save button clicked")
-               /* val oldUri = (imagesArray.getOrNull(imageindex ?: return) ?: run {
-                    Log.e(TAG, "Invalid image index: $imageindex")
-                    showError("Failed to load image")
-                    return
-                }).toUri()*/
+
                 val imageItem = imagesList.find { it.id == imageindex } ?: return
                 val oldUri = imageItem.imagePath.toUri()
-               /* val newImageUri: Uri? = origPic.saveCroppedImage(applicationContext, filename)
-                if (newImageUri != null) {
-                    imagesList.add(imageindex, newImageUri.toString())
-                    if (saveArray(imagesArray, "imagesPathList", applicationContext)) {
-                        val prefs = getSharedPreferences("wallpaperimages", Context.MODE_PRIVATE)
-                        val editor = prefs.edit()
-
-                        fun removeFromCategory(listName: String) {
-                            val size = prefs.getInt("${listName}_size", 0)
-                            val newList = mutableListOf<String>()
-                            for (i in 0 until size) {
-                                val path = prefs.getString("${listName}_$i", null)
-                                if (path != null && path != oldUri.toString()) newList.add(path)
-                            }
-                            editor.putInt("${listName}_size", newList.size)
-                            newList.forEachIndexed { i, v -> editor.putString("${listName}_$i", v) }
-                        }
-
-                        removeFromCategory("homeImages")
-                        removeFromCategory("lockImages")
-                        removeFromCategory("bothImages")
-                        removeFromCategory("clearImages")
-
-                        editor.apply()
-
-                        // Delete old file from MediaStore
-                        try {
-                            applicationContext.contentResolver.delete(oldUri, null, null)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                        val intent = Intent(this, RGrid::class.java)
-                        intent.putExtra("frompage", "none")
-                        startActivity(intent)
-                        finishAndRemoveTask()
-                    }
-                } else {
-                    Toast.makeText(this, "Failed to save image", Toast.LENGTH_SHORT).show()
-                }*/
-                val success = origPic.saveCroppedImageNew(applicationContext, oldUri)
-
-                if (success) {
-                    bustGlideCache(oldUri.toString())
-
+                //val success = origPic.saveCroppedImageNew(applicationContext, oldUri)
+                val newUri = origPic.saveCroppedImageNew1(applicationContext, oldUri)
+                if (newUri != null) {
+                    //bustGlideCache(oldUri.toString())  --for overwrite
+                    bustGlideCache(newUri.toString())
                     Glide.get(applicationContext).clearMemory()
 
                     // 2. Clear GLIDE DISK CACHE (MUST be on Background Thread)
                     lifecycleScope.launch(Dispatchers.IO) {
-                        // Note: This clears the ENTIRE disk cache, which is the most aggressive fix.
-                        // If you can get a File object from the URI, clearing only that file is better.
+
                         Glide.get(applicationContext).clearDiskCache()
 
                         // 3. Navigate back to RGrid after cache is cleared (optional but safer)
                         withContext(Dispatchers.Main) {
                             val intent = Intent(applicationContext, RGrid::class.java)
                             intent.putExtra("frompage", "none")
+                            intent.putExtra("new_image_uri", newUri.toString())
                             startActivity(intent)
                             finish()
                         }
@@ -376,7 +380,7 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
                 }
             }
             undoIcon -> {
-                Log.d(TAG, "Undo button clicked")
+
                 try {
                     bmp?.let { bitmap ->
                         with(origPic) {
@@ -388,18 +392,18 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
                             setCropEnabled(true)
                         }
                         showBeforeCrop()
-                        Log.d(TAG, "Transformations reset")
+
                     } ?: run {
-                        Log.e(TAG, "Original bitmap is null")
+                        AppLogger.e(TAG, "Original bitmap is null")
                         Toast.makeText(this@CropActivity, "No image to reset", Toast.LENGTH_SHORT).show()
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Undo failed: ${e.message}", e)
+                    AppLogger.e(TAG, "Undo failed: ${e.message}", e)
                     Toast.makeText(this@CropActivity, "Undo error", Toast.LENGTH_SHORT).show()
                 }
             }
             cancelButton -> {
-                Log.d(TAG, "Cancel button clicked")
+
                 bmp?.let { bitmap ->
                     with(origPic) {
                         resetMatrix()
@@ -410,9 +414,9 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
                         setCropEnabled(true)
                     }
                     showBeforeCrop()
-                    Log.d(TAG, "Transformations reset")
+
                 } ?: run {
-                    Log.e(TAG, "Original bitmap is null")
+                    AppLogger.e(TAG, "Original bitmap is null")
                     Toast.makeText(this@CropActivity, "No image to reset", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -423,7 +427,7 @@ class CropActivity : ComponentActivity(), View.OnClickListener {
         val prefs = getSharedPreferences("glide_cache_busters", Context.MODE_PRIVATE)
         val currentBuster = prefs.getInt(uriString, 0)
         prefs.edit().putInt(uriString, currentBuster + 1).apply()
-        Log.d(TAG, "Busted cache for $uriString. New buster: ${currentBuster + 1}")
+        AppLogger.d(TAG, "Busted cache for $uriString. New buster: ${currentBuster + 1}")
     }
 
     private fun saveArray(array: Array<String>, arrayName: String, context: Context): Boolean {

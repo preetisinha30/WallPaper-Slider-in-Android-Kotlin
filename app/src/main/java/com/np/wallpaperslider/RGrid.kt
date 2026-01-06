@@ -46,7 +46,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isEmpty
 import androidx.core.view.updatePadding
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
@@ -102,7 +104,7 @@ class RGrid : AppCompatActivity() {
     private lateinit var permissionCoordinator: PermissionCoordinator
     // Launchers (Only keep those NOT managed by the coordinator)
     private lateinit var pickImagesLauncher: ActivityResultLauncher<String>
-
+    private var changeNoticed:Boolean = false
     //companion object
     companion object {
         lateinit var recyclerview: RecyclerView
@@ -120,16 +122,18 @@ class RGrid : AppCompatActivity() {
 
         var bundle: Bundle? = intent.extras
         fromPage = bundle?.getString("frompage") ?: ""
-        Log.i(TAG, "frompage $fromPage")
-        if (fromPage != "main" && iswallpaperSet()) {
-            //exitSelectionMode()
-            moveTaskToBack(true)
-            /*window.setFlags(
-                WindowManager.LayoutParams.FLAG_SECURE,
-                WindowManager.LayoutParams.FLAG_SECURE
-            )*/
+        AppLogger.i(TAG, "frompage $fromPage")
+        if (fromPage == "" && iswallpaperSet()) {
+           /* moveTaskToBack(true)
+
             finishAndRemoveTask()
-            return
+            return*/
+            Toast.makeText(
+                applicationContext,
+                "Wallpaper set successfully.",
+                Toast.LENGTH_LONG
+            ).show()
+
         }
       /*  toolbar?.setNavigationIcon(R.drawable.ic_back_arrow)
         toolbar?.setNavigationOnClickListener {
@@ -168,15 +172,10 @@ class RGrid : AppCompatActivity() {
         fromPage = ""
         intent.removeExtra("frompage")
         imagesList = ArrayList()
-        recyclerview = findViewById<RecyclerView>(R.id.rv_grid)
-        recyclerview.visibility = View.GONE
-        recyclerImageAdapter = RecyclerImageAdapter(this@RGrid, this@RGrid, mutableListOf()) { isSelecting ->
-            isSelectionMode = isSelecting
-            updateToolbarForSelectionMode()
-        }
-        val layoutManager: RecyclerView.LayoutManager = GridLayoutManager(this, 3)
-        recyclerview.layoutManager = layoutManager
-        recyclerview.adapter = recyclerImageAdapter
+
+        setupGrid()
+
+
 
         durationtv = findViewById<TextView>(R.id.duration_status_text)
         updateDurationText(settime)
@@ -246,6 +245,51 @@ class RGrid : AppCompatActivity() {
             toggleFabMenu() // Close menu after selection
         }
 
+        val new_image_uri:String? = bundle?.getString("new_image_uri")
+        if(new_image_uri!=null)
+        {
+            lifecycleScope.launch {
+                saveNewImage(new_image_uri.toUri())
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.HONEYCOMB_MR2)
+    private fun setupGrid() {
+        recyclerview = findViewById<RecyclerView>(R.id.rv_grid)
+        
+            recyclerview.visibility = View.GONE
+            recyclerImageAdapter =
+                RecyclerImageAdapter(this@RGrid, this@RGrid, mutableListOf()) { isSelecting ->
+                    isSelectionMode = isSelecting
+                    updateToolbarForSelectionMode()
+                }
+            val screenWidthDp = resources.configuration.screenWidthDp
+            val columns = if (screenWidthDp >= 600) 4 else 3
+            val layoutManager: RecyclerView.LayoutManager = GridLayoutManager(this, columns)
+            recyclerview.layoutManager = layoutManager
+            val spacingInPixels = (8 * resources.displayMetrics.density).toInt()
+
+            // Remove existing decorators if you're calling this on screen rotation/unfolding
+            while (recyclerview.itemDecorationCount > 0) {
+                recyclerview.removeItemDecorationAt(0)
+            }
+
+            recyclerview.addItemDecoration(
+                GridSpacingItemDecoration(columns, spacingInPixels, true)
+            )
+            recyclerview.adapter = recyclerImageAdapter
+
+    }
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+
+        // Refresh the grid setup when the screen size changes (Fold/Unfold)
+        setupGrid()
+
+        // This ensures your adaptive XML (guidelines, max widths)
+        // also refreshes if needed.
+        setContentView(R.layout.activity_rgrid)
     }
 
     private fun setupFabMenu() {
@@ -317,7 +361,7 @@ class RGrid : AppCompatActivity() {
     }
 
      fun isImageTapCompleted(): Boolean {
-        Log.i(TAG, "in isImageTapCompleted")
+       // Log.i(TAG, "in isImageTapCompleted")
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getBoolean(PREF_IMAGETAP_COMPLETED, false)
     }
@@ -369,11 +413,11 @@ class RGrid : AppCompatActivity() {
             lockImages = loadImageList("lockImages").toMutableList()
             bothImages = loadImageList("bothImages").toMutableList()
             clearImages = loadImageList("clearImages").toMutableList()
-            Log.d(TAG, "Loaded lists: home=${homeImages.size}, lock=${lockImages.size}, both=${bothImages.size}, clear=${clearImages.size}")
+            //Log.d(TAG, "Loaded lists: home=${homeImages.size}, lock=${lockImages.size}, both=${bothImages.size}, clear=${clearImages.size}")
 
             // Load all images from imagesPathList
             val allImages = prepareImageListData("imagesPathList", applicationContext)
-            Log.d(TAG, "Loaded ${allImages.size} images from imagesPathList: $allImages")
+            //Log.d(TAG, "Loaded ${allImages.size} images from imagesPathList: $allImages")
 
             // Add uncategorized images to clearImages
             val categorizedImages = (homeImages + lockImages + bothImages + clearImages).distinct()
@@ -381,11 +425,11 @@ class RGrid : AppCompatActivity() {
             if (uncategorizedImages.isNotEmpty()) {
                 clearImages.addAll(uncategorizedImages)
                 saveImageList("clearImages", clearImages)
-                Log.d(TAG, "Added ${uncategorizedImages.size} uncategorized images to clearImages: $uncategorizedImages")
+                //Log.d(TAG, "Added ${uncategorizedImages.size} uncategorized images to clearImages: $uncategorizedImages")
             }
 
             // Log all images for debugging
-            Log.d(TAG, "Final clearImages: ${clearImages.size} images: $clearImages")
+            //Log.d(TAG, "Final clearImages: ${clearImages.size} images: $clearImages")
 
             // If no images are available in any list, notify user and navigate back
             if (homeImages.isEmpty() && lockImages.isEmpty() && bothImages.isEmpty() && clearImages.isEmpty()) {
@@ -401,7 +445,7 @@ class RGrid : AppCompatActivity() {
         return withContext(Dispatchers.IO) {
             val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             val size = prefs.getInt("${arrayName}_size", 0)
-            Log.d(TAG, "Loading $arrayName, size: $size")
+            //Log.d(TAG, "Loading $arrayName, size: $size")
             val images = mutableListOf<String>()
             for (index in 0 until size) {
                 prefs.getString("${arrayName}_$index", null)?.let { path ->
@@ -410,9 +454,9 @@ class RGrid : AppCompatActivity() {
                             // Validate URI accessibility
                             contentResolver.openInputStream(Uri.parse(path))?.close()
                             images.add(path)
-                            Log.d(TAG, "Valid URI for $arrayName[$index]: $path")
+                            //Log.d(TAG, "Valid URI for $arrayName[$index]: $path")
                         } catch (e: Exception) {
-                            Log.w(TAG, "Invalid URI for $arrayName[$index]: $path, error: ${e.message}")
+                            AppLogger.w(TAG, "Invalid URI for $arrayName[$index]: $path, error: ${e.message}")
                             // Remove invalid entry
                             val editor = prefs.edit()
                             editor.remove("${arrayName}_$index")
@@ -429,7 +473,7 @@ class RGrid : AppCompatActivity() {
         return withContext(Dispatchers.IO) {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             val size = prefs.getInt("${arrayName}_size", 0)
-            Log.d(TAG, "Preparing $arrayName, size: $size")
+            AppLogger.d(TAG, "Preparing $arrayName, size: $size")
             val images = mutableListOf<String>()
             for (index in 0 until size) {
                 prefs.getString("${arrayName}_$index", null)?.let { path ->
@@ -437,9 +481,9 @@ class RGrid : AppCompatActivity() {
                         try {
                             context.contentResolver.openInputStream(Uri.parse(path))?.close()
                             images.add(path)
-                            Log.d(TAG, "Valid URI for $arrayName[$index]: $path")
+                            //Log.d(TAG, "Valid URI for $arrayName[$index]: $path")
                         } catch (e: Exception) {
-                            Log.w(TAG, "Invalid URI for $arrayName[$index]: $path, error: ${e.message}")
+                            AppLogger.w(TAG, "Invalid URI for $arrayName[$index]: $path, error: ${e.message}")
                             // Remove invalid entry
                             val editor = prefs.edit()
                             editor.remove("${arrayName}_$index")
@@ -474,7 +518,7 @@ class RGrid : AppCompatActivity() {
             "both" -> imagesList.addAll(bothImages.map { ImageItem.fromPath(it, "both") })
             "clear" -> imagesList.addAll(clearImages.map { ImageItem.fromPath(it, "clear") })
         }
-        Log.d(TAG, "Updating RecyclerView for $currentSegment: ${imagesList.size} images: $imagesList")
+        AppLogger.d(TAG, "Updating RecyclerView for $currentSegment: ${imagesList.size} images: $imagesList")
         withContext(Dispatchers.Main) {
             recyclerImageAdapter.updateData(imagesList.toList())
             recyclerview.alpha = 0f
@@ -496,30 +540,28 @@ class RGrid : AppCompatActivity() {
         if (imagesList.isEmpty() && currentSegment !="all") {
             Toast.makeText(this, "No images in $currentSegment category", Toast.LENGTH_SHORT).show()
         }
-        if(totalGroupedImages>=1)
-        {
-            nextButton.visibility = View.VISIBLE
+        nextButton.visibility = if (totalGroupedImages >= 1 && (!iswallpaperSet() || changeNoticed)) {
+            View.VISIBLE
+        } else {
+            View.GONE
         }
-        else
-        {
-            nextButton.visibility = View.GONE
-        }
+
         if (isImageTapCompleted()) {
-            Log.i(TAG, "in true section")
+
             spotlightView.visibility = View.GONE
             titleView.visibility = View.GONE
 
         }
         else {
-            Log.i(TAG, "in false section")
+
             recyclerview.post {
                 val targetView =
                     recyclerview.findViewHolderForAdapterPosition(0)?.itemView // Get the image view item
-                Log.i(TAG, "${targetView?.isShown()}")
+
                 if (targetView != null) {
                     val coords = IntArray(2)
                     targetView.getLocationOnScreen(coords) // Get absolute screen position
-                    Log.i(TAG, "$targetView.getLocationOnScreen(coords)")
+                   // Log.i(TAG, "$targetView.getLocationOnScreen(coords)")
                     // 1. Configure and show the spotlight
                     spotlightView.setTargetRect(
                         coords[0],
@@ -555,7 +597,7 @@ class RGrid : AppCompatActivity() {
         saveImageList("lockImages", lockImages)
         saveImageList("bothImages", bothImages)
         saveImageList("clearImages", clearImages)
-        Log.d(TAG, "Saved all image lists: home=${homeImages.size}, lock=${lockImages.size}, both=${bothImages.size}, clear=${clearImages.size}")
+        //Log.d(TAG, "Saved all image lists: home=${homeImages.size}, lock=${lockImages.size}, both=${bothImages.size}, clear=${clearImages.size}")
     }
 
     private suspend fun deleteSelectedImages() {
@@ -697,7 +739,7 @@ class RGrid : AppCompatActivity() {
 
         // Check if the item was found
         if (imageItem != null) {
-            Log.d(TAG, "imageItem : ${imageItem.category}")
+            //Log.d(TAG, "imageItem : ${imageItem.category}")
             // Find the specific menu item by its ID
             val setHomeItem = menu.findItem(R.id.action_set_home)
             val setLockItem = menu.findItem(R.id.action_set_lock)
@@ -729,22 +771,46 @@ class RGrid : AppCompatActivity() {
         lifecycleScope.launch {
             when (item.itemId) {
                 R.id.action_set_home -> {
-                    if(homeImages.contains(imagePath))
-                        moveImageToList(imagePath, "clear")
-                    else if(lockImages.contains(imagePath))
-                        moveImageToList(imagePath, "both")
-                    else
-                        moveImageToList(imagePath, "home")
-                  //  Toast.makeText(this@RGrid, "Set as Home: $imagePath", Toast.LENGTH_SHORT).show()
+                    when (imageItem.category) {
+                        "both" -> { // Currently Home & Lock
+
+                            moveImageToList(imagePath, "lock") // Target state is only Lock
+                        }
+                        "home" -> { // Currently only Home
+
+                            moveImageToList(imagePath, "clear") // Target state is Clear
+                        }
+                        "lock" -> { // Currently only Lock
+
+                            moveImageToList(imagePath, "both") // Target state is Both
+                        }
+                        else -> { // Currently clear
+
+                            moveImageToList(imagePath, "home") // Target state is Home
+                        }
+                    }
+                    changeNoticed = true
                 }
                 R.id.action_set_lock -> {
-                    if(lockImages.contains(imagePath))
-                        moveImageToList(imagePath, "clear")
-                    else if(homeImages.contains(imagePath))
-                        moveImageToList(imagePath, "both")
-                    else
-                        moveImageToList(imagePath, "lock")
-                   // Toast.makeText(this@RGrid, "Set as Lock: $imagePath", Toast.LENGTH_SHORT).show()
+                    when (imageItem.category) {
+                        "both" -> { // Currently Home & Lock
+
+                            moveImageToList(imagePath, "home") // Target state is only Home
+                        }
+                        "lock" -> { // Currently only Lock
+
+                            moveImageToList(imagePath, "clear") // Target state is Clear
+                        }
+                        "home" -> { // Currently only Home
+
+                            moveImageToList(imagePath, "both") // Target state is Both
+                        }
+                        else -> { // Currently clear
+
+                            moveImageToList(imagePath, "lock") // Target state is Lock
+                        }
+                    }
+                    changeNoticed = true
                 }
                 /*R.id.action_set_both -> {
                     moveImageToList(imagePath, "both")
@@ -838,7 +904,7 @@ class RGrid : AppCompatActivity() {
 
         finish() // Finish RGrid to prevent it from staying in the back stack
 
-        Log.d(TAG, "Navigating to MainActivity, finishing RGrid")
+        //Log.d(TAG, "Navigating to MainActivity, finishing RGrid")
 
     }
 
@@ -1156,14 +1222,14 @@ class RGrid : AppCompatActivity() {
             val wpm = WallpaperManager.getInstance(this)
             val info = wpm.wallpaperInfo
             if (info != null && info.packageName == this.packageName) {
-                Log.d(TAG, "We're already running")
+                AppLogger.d(TAG, "We're already running")
                 return true
             } else {
-                Log.d(TAG, "We're not running")
+                AppLogger.d(TAG, "We're not running")
                 return false
             }
         } catch (e: Exception) {
-            Log.e(TAG, e.message, e)
+            AppLogger.e(TAG, e.message.toString(), e)
         }
         return false
     }
@@ -1181,7 +1247,7 @@ class RGrid : AppCompatActivity() {
 
             val wallpaperPackageName = componentName?.packageName ?: "System/Static Wallpaper"
 
-            Log.d(TAG, "Current Wallpaper Package: $wallpaperPackageName")
+            AppLogger.d(TAG, "Current Wallpaper Package: $wallpaperPackageName")
 
             // 2. Check the set flags (only reliable on newer APIs or for non-live wallpapers)
             // Note: wallpaperManager.getWallpaperId() is needed for flags on API 24+ (N)
@@ -1205,17 +1271,17 @@ class RGrid : AppCompatActivity() {
             }
 
             // 3. Display the results in the log
-            Log.i(TAG, "--- WALLPAPER STATUS ---")
-            Log.i(TAG, "Provider Package: $wallpaperPackageName")
-            Log.i(TAG, "Set Flags: $flagsInfo")
-            Log.i(TAG, "------------------------")
+            AppLogger.i(TAG, "--- WALLPAPER STATUS ---")
+            AppLogger.i(TAG, "Provider Package: $wallpaperPackageName")
+            AppLogger.i(TAG, "Set Flags: $flagsInfo")
+            AppLogger.i(TAG, "------------------------")
 
 
             // You can also show a Toast for quick debugging on device
             // Toast.makeText(this, "WP Package: $wallpaperPackageName | Flags: $flagsInfo", Toast.LENGTH_LONG).show()
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error checking wallpaper status: ${e.message}")
+            AppLogger.e(TAG, "Error checking wallpaper status: ${e.message}")
             // Toast.makeText(this, "Failed to check wallpaper status.", Toast.LENGTH_SHORT).show()
         }
     }
@@ -1228,9 +1294,9 @@ class RGrid : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 101) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Log.d(TAG, "POST_NOTIFICATIONS permission granted")
+                AppLogger.d(TAG, "POST_NOTIFICATIONS permission granted")
             } else {
-                Log.w(TAG, "POST_NOTIFICATIONS permission denied")
+                AppLogger.w(TAG, "POST_NOTIFICATIONS permission denied")
                 Toast.makeText(this, "Notification permission denied. Wallpaper service may not work.", Toast.LENGTH_LONG).show()
             }
         }
@@ -1266,9 +1332,9 @@ class RGrid : AppCompatActivity() {
                 )
             } catch (e: SecurityException) {
                 // This can happen if the content provider doesn't support persistable permissions
-                Log.w(TAG, "Provider does not support persistable URI permission for $uri: ${e.message}")
+                AppLogger.w(TAG, "Provider does not support persistable URI permission for $uri: ${e.message}")
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to take persistable URI permission for $uri: ${e.message}")
+                AppLogger.e(TAG, "Failed to take persistable URI permission for $uri: ${e.message}")
             }
         }
 
@@ -1297,10 +1363,13 @@ class RGrid : AppCompatActivity() {
         val resolver = context.contentResolver
         val bitmap = BitmapFactory.decodeStream(resolver.openInputStream(uri)) ?: return null
 
+        val displayName = uri.lastPathSegment ?: "wall_${System.currentTimeMillis()}.jpg"
         val values = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, uri.lastPathSegment)
+            put(MediaStore.Images.Media.DISPLAY_NAME, displayName)
             put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
             put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/WallPaperApp")
+            put(MediaStore.Images.Media.DATE_ADDED, System.currentTimeMillis() / 1000)
+            put(MediaStore.Images.Media.DATE_MODIFIED, System.currentTimeMillis() / 1000)
         }
 
         return resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)?.also { savedUri ->
@@ -1310,23 +1379,38 @@ class RGrid : AppCompatActivity() {
         }
     }
 
+    private suspend fun saveNewImage(imageURI:Uri)
+    {
+        withContext(Dispatchers.Main) {
+            val imagesPathList =
+                prepareImageListData("imagesPathList", applicationContext).toMutableList()
+            imagesPathList.add(imageURI.toString())
+            clearImages.add(imageURI.toString())
+            saveImageList("imagesPathList", imagesPathList)
+            saveImageList("clearImages", clearImages)
+            updateRecyclerView()
+            Toast.makeText(applicationContext, "Saved a copy of Image. Please group it to home and/or lock", Toast.LENGTH_LONG).show()
+            changeNoticed = true
+        }
+    }
+
     private fun startSetupFlow() {
         when {
             // Check 1: Runtime Permission (Android 13+)
-            !permissionCoordinator.hasNotificationPermission() -> {
+          /*  !permissionCoordinator.hasNotificationPermission() -> {
                 requestNotificationPermission()
             }
             // Check 2: Notification Channel (Settings)
             !permissionCoordinator.isNotificationChannelEnabled() -> {
                 showEnableNotificationsDialog()
-            }
+            }*/
             // Check 3: Battery Optimization
             !permissionCoordinator.isIgnoringBatteryOptimizations() -> {
                 requestIgnoreBatteryOptimizations()
             }
             else -> {
                 // All good — proceed with normal app behavior
-                Log.d(TAG, "All permissions/settings satisfied")
+                AppLogger.d(TAG, "All permissions/settings satisfied")
             }
         }
     }
@@ -1336,7 +1420,12 @@ class RGrid : AppCompatActivity() {
     }
 
     private fun showEnableNotificationsDialog() {
-        val builder = android.app.AlertDialog.Builder(this)
+        val builder = android.app.AlertDialog.Builder(
+            androidx.appcompat.view.ContextThemeWrapper(
+                this,
+                R.style.AlertDialogCustom
+            )
+        )
             .setTitle("Enable Notifications")
             .setMessage("This app requires notifications to run the wallpaper service. Please enable the 'Wallpaper Slider' channel in settings.")
             .setPositiveButton("Open Settings") { dialog, _ ->
@@ -1351,7 +1440,7 @@ class RGrid : AppCompatActivity() {
         try {
             builder.show()
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to show notifications dialog: ${e.message}")
+            AppLogger.e(TAG, "Failed to show notifications dialog: ${e.message}")
         }
     }
 

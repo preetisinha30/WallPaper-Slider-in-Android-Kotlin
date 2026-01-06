@@ -45,13 +45,13 @@ class WallpaperForegroundService : Service() {
             when (msg.what) {
                 MSG_SHOW_NOTIFICATION -> {
                     if (iswallpaperSet() && !isInPreview) {
-                        Log.d("WallpaperForegroundService", "Showing notification")
+                        AppLogger.d("WallpaperForegroundService", "Showing notification")
                         startForeground(serviceId, createNotification())
                     }
                 }
                 MSG_REMOVE_NOTIFICATION -> {
                     isInPreview = true
-                    Log.d("WallpaperForegroundService", "Removing notification")
+                    AppLogger.d("WallpaperForegroundService", "Removing notification")
                     stopForeground(true)
                     notificationManager.cancel(serviceId)
                     if (!iswallpaperSet()) {
@@ -67,7 +67,7 @@ class WallpaperForegroundService : Service() {
         override fun onCreate() {
             super.onCreate()
             notificationManager = getSystemService(NotificationManager::class.java)
-            Log.d("WallpaperService", "Service onCreate")
+            AppLogger.d("WallpaperService", "Service onCreate")
             createChannel()
             messenger = Messenger(handler)
 
@@ -83,7 +83,7 @@ class WallpaperForegroundService : Service() {
 
            // isInPreview = intent?.getBooleanExtra("isPreview", isInPreview) ?: isInPreview
             val launchPreviewExplicitly = intent?.getBooleanExtra("isPreview", false) ?: false
-            Log.d("WallpaperService", "Foreground service started. Current state: isInPreview=$launchPreviewExplicitly")
+            AppLogger.d("WallpaperService", "Foreground service started. Current state: isInPreview=$launchPreviewExplicitly")
             startForeground(serviceId, createTemporaryNotification())
 
 
@@ -103,7 +103,7 @@ class WallpaperForegroundService : Service() {
             val isSet = iswallpaperSet()
             if (isSet && !launchPreviewExplicitly) {
                 // CASE A: Wallpaper is set, running normally.
-                Log.d("WFS", "Wallpaper is set. Switching to permanent notification.")
+                AppLogger.d("WFS", "Wallpaper is set. Switching to permanent notification.")
                 // Update to the permanent notification
                 startForeground(serviceId, createNotification())
 
@@ -112,7 +112,7 @@ class WallpaperForegroundService : Service() {
 
             } else {
                 // CASE B: Wallpaper is NOT set OR we are explicitly launching the preview.
-                Log.d("WFS", "Launching wallpaper picker. isSet=$isSet, isInPreview=$isInPreview")
+                AppLogger.d("WFS", "Launching wallpaper picker. isSet=$isSet, isInPreview=$isInPreview")
 
                 // Launch the system's live wallpaper picker activity
                 callWallpaperService(applicationContext)
@@ -147,14 +147,14 @@ class WallpaperForegroundService : Service() {
 
             // Restart the service
              if (iswallpaperSet() && !isInPreview) {
-                Log.d("WallpaperService", "Wallpaper active, restarting service")
+                AppLogger.d("WallpaperService", "Wallpaper active, restarting service")
                  handler.postDelayed({
                      val restartServiceIntent = Intent(applicationContext, WallpaperForegroundService::class.java)
                      restartServiceIntent.setPackage(packageName)
                      startService(restartServiceIntent)
                  }, 1000) // Delay to allow task cleanup
             } else {
-                Log.d("WallpaperService", "Wallpaper not active, not restarting")
+                AppLogger.d("WallpaperService", "Wallpaper not active, not restarting")
                  stopForeground(true)
                  notificationManager.cancel(serviceId)
                  stopSelf()
@@ -179,7 +179,7 @@ class WallpaperForegroundService : Service() {
                     enableVibration(false)
                 }
                 notificationManager.createNotificationChannel(channel)
-                Log.d("WallpaperService", "Notification channel created: $notificationChannel")
+                AppLogger.d("WallpaperService", "Notification channel created: $notificationChannel")
             }
         }
     }
@@ -201,7 +201,7 @@ class WallpaperForegroundService : Service() {
             .setSilent(true) // No sound/vibration
 
         notification = builder.build()
-        Log.d("WallpaperService", "Notification created")
+        AppLogger.d("WallpaperService", "Notification created")
         return notification
     }
 
@@ -215,7 +215,7 @@ class WallpaperForegroundService : Service() {
             .setSilent(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
         val notification = builder.build()
-        Log.d("WallpaperForegroundService", "Temporary notification created")
+        AppLogger.d("WallpaperForegroundService", "Temporary notification created")
         return notification
     }
 
@@ -225,7 +225,7 @@ class WallpaperForegroundService : Service() {
             val info = wpm.wallpaperInfo
             return info != null && info.packageName == packageName
         } catch (e: Exception) {
-            Log.e("WallpaperService", "Error checking wallpaper: ${e.message}", e)
+            AppLogger.e("WallpaperService", "Error checking wallpaper: ${e.message}", e)
             return false
         }
     }
@@ -245,9 +245,9 @@ class WallpaperForegroundService : Service() {
                 if (info != null && info.packageName == this.packageName) {
                     wallpaperManager.clear()
                 }
-                Log.d("WallpaperForegroundService", "Cleared existing wallpaper")
+                AppLogger.d("WallpaperForegroundService", "Cleared existing wallpaper")
             } catch (e: IOException) {
-                Log.e("WallpaperForegroundService", "Error clearing wallpaper: ${e.message}", e)
+                AppLogger.e("WallpaperForegroundService", "Error clearing wallpaper: ${e.message}", e)
                 e.printStackTrace()
 
             }
@@ -262,7 +262,7 @@ class WallpaperForegroundService : Service() {
 
         try {
             packageContext.startActivity(intent)
-            Log.d("WallpaperForegroundService", "Launched live wallpaper picker")
+            AppLogger.d("WallpaperForegroundService", "Launched live wallpaper picker")
             // Stop the foreground service if in preview or wallpaper not set to avoid lingering
             /*if (!iswallpaperSet() || isInPreview) {
                 stopForeground(true)
@@ -271,7 +271,7 @@ class WallpaperForegroundService : Service() {
             }*/
 
         } catch (e: ActivityNotFoundException) {
-            Log.e("WallpaperForegroundService", "Failed to launch wallpaper activity", e)
+            AppLogger.e("WallpaperForegroundService", "Failed to launch wallpaper activity", e)
             stopForeground(true)
             notificationManager.cancel(serviceId)
             stopSelf()
@@ -285,7 +285,7 @@ class WallpaperForegroundService : Service() {
     override fun onDestroy() {
         stopForeground(true)
         notificationManager.cancel(serviceId)
-        Log.d("WallpaperForegroundService", "Service destroyed")
+        AppLogger.d("WallpaperForegroundService", "Service destroyed")
         super.onDestroy()
     }
 
@@ -309,11 +309,11 @@ class WallpaperForegroundService : Service() {
 
             pendingIntent.send()
 
-            Log.d("WallpaperForegroundService", "Navigated to MainActivity")
+            AppLogger.d("WallpaperForegroundService", "Navigated to MainActivity")
 
         } catch (e: Exception) {
 
-            Log.e("WallpaperForegroundService", "Failed to navigate to MainActivity: ${e.message}")
+            AppLogger.e("WallpaperForegroundService", "Failed to navigate to MainActivity: ${e.message}")
 
         }
     }
@@ -330,7 +330,7 @@ class WallpaperForegroundService : Service() {
         try {
             pendingIntent.send() // Launch the activity safely
         } catch (e: PendingIntent.CanceledException) {
-            Log.e("WallpaperForegroundService", "PendingIntent failed", e)
+            AppLogger.e("WallpaperForegroundService", "PendingIntent failed", e)
         }
     }
 
@@ -338,7 +338,7 @@ class WallpaperForegroundService : Service() {
     fun getNotifications()
     {val notifications = notificationManager.activeNotifications
         for (notif in notifications) {
-            Log.d("WallpaperService", "Active Notification ID: ${notif.id}")
+            AppLogger.d("WallpaperService", "Active Notification ID: ${notif.id}")
         }
     }
 

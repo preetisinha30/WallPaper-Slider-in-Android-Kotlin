@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+
 }
 
 android {
@@ -11,8 +12,8 @@ android {
         applicationId = "com.np.wallpaperslider"
         minSdk = 35
         targetSdk = 35
-        versionCode = 23
-        versionName = "1.11"
+        versionCode = 25
+        versionName = "1.13"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -23,12 +24,13 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
+
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
@@ -40,7 +42,7 @@ android {
     buildFeatures {
         compose = true
         viewBinding = true
-
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
@@ -70,10 +72,10 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.2.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.cardview:cardview:1.0.0")
-    implementation("androidx.recyclerview:recyclerview:1.1.0")
+    implementation("androidx.recyclerview:recyclerview:1.4.0")
 
     // For control over item selection of both touch and mouse driven selection
-    implementation("androidx.recyclerview:recyclerview-selection:1.1.0")
+    implementation("androidx.recyclerview:recyclerview-selection:1.2.0")
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.viewpager2:viewpager2:1.1.0")
     // implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
@@ -85,11 +87,11 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     implementation("androidx.core:core-splashscreen:1.0.1")
-    implementation("com.squareup.picasso:picasso:2.71828")
+    //implementation("com.squareup.picasso:picasso:2.71828")
     // For developers using AndroidX in their applications
-    implementation("pub.devrel:easypermissions:3.0.0")
+    //implementation("pub.devrel:easypermissions:3.0.0")
     // For developers using the Android Support Library
-    implementation("pub.devrel:easypermissions:3.0.0")
+    //implementation("pub.devrel:easypermissions:3.0.0")
     implementation("com.github.bumptech.glide:glide:4.16.0")
     annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
     implementation("com.google.code.gson:gson:2.11.0")

@@ -113,7 +113,7 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     // Denied runtime permission, proceed to ask user to open settings
                    // Toast.makeText(this, "Notification permission denied", Toast.LENGTH_SHORT).show()
-                    showEnableNotificationsDialog()
+                    //showEnableNotificationsDialog()
                 }
 
             },
@@ -168,16 +168,16 @@ class MainActivity : AppCompatActivity() {
                 requestNotificationPermission()
             }
             // Check 2: Notification Channel (Settings)
-            !permissionCoordinator.isNotificationChannelEnabled() -> {
+           /* !permissionCoordinator.isNotificationChannelEnabled() -> {
                 showEnableNotificationsDialog()
-            }
+            }*/
             // Check 3: Battery Optimization
             !permissionCoordinator.isIgnoringBatteryOptimizations() -> {
                 requestIgnoreBatteryOptimizations()
             }
             else -> {
                 // All good — proceed with normal app behavior
-                Log.d(TAG, "All permissions/settings satisfied")
+                AppLogger.d(TAG, "All permissions/settings satisfied")
             }
         }
     }
@@ -207,9 +207,9 @@ class MainActivity : AppCompatActivity() {
                     enableVibration(false)
                 }
                 manager.createNotificationChannel(channel)
-                Log.d(TAG, "Notification channel created")
+                AppLogger.d(TAG, "Notification channel created")
             } else {
-                Log.d(TAG, "Notification channel exists")
+                AppLogger.d(TAG, "Notification channel exists")
             }
         }
     }
@@ -232,7 +232,7 @@ class MainActivity : AppCompatActivity() {
         try {
             builder.show()
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to show notifications dialog: ${e.message}")
+            AppLogger.e(TAG, "Failed to show notifications dialog: ${e.message}")
         }
     }
 
@@ -272,9 +272,9 @@ class MainActivity : AppCompatActivity() {
                 )
             } catch (e: SecurityException) {
                 // This can happen if the content provider doesn't support persistable permissions
-                Log.w(TAG, "Provider does not support persistable URI permission for $uri: ${e.message}")
+                AppLogger.w(TAG, "Provider does not support persistable URI permission for $uri: ${e.message}")
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to take persistable URI permission for $uri: ${e.message}")
+                AppLogger.e(TAG, "Failed to take persistable URI permission for $uri: ${e.message}")
             }
         }
 
@@ -312,7 +312,7 @@ class MainActivity : AppCompatActivity() {
         val input = try {
             resolver.openInputStream(uri)
         } catch (e: Exception) {
-            Log.e(TAG, "openInputStream failed: ${e.message}")
+            AppLogger.e(TAG, "openInputStream failed: ${e.message}")
             null
         } ?: return null
 
@@ -323,6 +323,8 @@ class MainActivity : AppCompatActivity() {
             put(MediaStore.Images.Media.DISPLAY_NAME, displayName)
             put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
             put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/WallPaperApp")
+            put(MediaStore.Images.Media.DATE_ADDED, System.currentTimeMillis() / 1000)
+            put(MediaStore.Images.Media.DATE_MODIFIED, System.currentTimeMillis() / 1000)
         }
 
         return try {
@@ -334,7 +336,7 @@ class MainActivity : AppCompatActivity() {
             }
             savedUri
         } catch (e: Exception) {
-            Log.e(TAG, "saveImage failed: ${e.message}")
+            AppLogger.e(TAG, "saveImage failed: ${e.message}")
             null
         } finally {
             input.closeQuietly()
@@ -351,7 +353,7 @@ class MainActivity : AppCompatActivity() {
             editor.putString("${arrayName}_$idx", path)
         }
         editor.apply()
-        Log.d(TAG, "Saved array $arrayName size=${array.size}")
+        AppLogger.d(TAG, "Saved array $arrayName size=${array.size}")
     }
 
     private fun loadArray(arrayName: String): ArrayList<String> {

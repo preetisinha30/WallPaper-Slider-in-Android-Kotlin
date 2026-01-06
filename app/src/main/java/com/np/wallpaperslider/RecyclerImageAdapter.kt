@@ -67,12 +67,13 @@ class RecyclerImageAdapter constructor(
                    // .skipMemoryCache(true)
                     //.signature(ObjectKey(File(imagePath).lastModified()))
                         .signature(cacheBusterKey)
+                        .centerCrop()
                     .error(R.drawable.error_placeholder) // Create this drawable
                     .placeholder(R.drawable.placeholder)) // Optional: loading placeholder
                 .into(holder.im_imagepath)
-            Log.d(TAG, "Loading image: $imagePath")
+            AppLogger.d(TAG, "Loading image: $imagePath")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to load image: $imagePath, error: ${e.message}", e)
+            AppLogger.e(TAG, "Failed to load image: $imagePath, error: ${e.message}", e)
         }
         holder.categoryIndicator.setImageDrawable(null)
         holder.categoryIndicator.visibility = View.GONE
@@ -105,11 +106,13 @@ class RecyclerImageAdapter constructor(
         holder.cardview.setOnClickListener {
             if (isSelectionMode) {
                 toggleSelection(imageItem.id)
-                notifyItemChanged(position)
+                //notifyItemChanged(position)
                 // Store position in the tag for context menu
                 holder.cardview.tag = position
                 holder.checkBox.isChecked = selectedIds.contains(imageItem.id)
                 onSelectionModeChanged(selectedIds.isNotEmpty())
+
+
             } else {
                 val intent = Intent(context, RViewActivity::class.java).apply {
                     putExtra("data", imagePath)
@@ -139,7 +142,7 @@ class RecyclerImageAdapter constructor(
                 toggleSelection(imageItem.id)
                 holder.checkBox.isChecked = selectedIds.contains(imageItem.id)
                 onSelectionModeChanged(selectedIds.isNotEmpty())
-                notifyItemChanged(position)
+                //notifyItemChanged(position)
                 true
             }
         }
@@ -165,19 +168,7 @@ class RecyclerImageAdapter constructor(
     }
 
     fun updateData(newList: List<ImageItem>) {
-        //Log.d(TAG, "Before exit: ${newList.size} images: $newList")
-        //exitSelectionMode()
-        //Log.d(TAG, "after exit: ${newList.size} images: $newList")
-        /*val diffCallback = ImageDiffCallback(imagesList, newList)
-        val diffResult = DiffUtil.calculateDiff(diffCallback)
 
-        //Log.d(TAG, "imagesList before clear: ${imagesList.size}")
-        imagesList.clear()
-        //Log.d(TAG, "imagesList after clear: ${imagesList.size}")
-        imagesList.addAll(newList)
-        //Log.d(TAG, "imagesList after addAll: ${imagesList.size}")
-        diffResult.dispatchUpdatesTo(this)*/
-        //Log.d(TAG, "Updated data: ${imagesList.size} images: $imagesList")
         imagesList.clear()
         imagesList.addAll(newList)
 
@@ -189,7 +180,7 @@ class RecyclerImageAdapter constructor(
         // Force a full redraw for immediate UI reflection without move animations.
         notifyDataSetChanged()
 
-        Log.d(TAG, "Data updated and notifyDataSetChanged called for immediate UI reflection.")
+        AppLogger.d(TAG, "Data updated and notifyDataSetChanged called for immediate UI reflection.")
     }
 
 
@@ -224,7 +215,7 @@ class RecyclerImageAdapter constructor(
     fun getSelectedIds(): Set<Long> = selectedIds
 
     private fun toggleSelection(id: Long) {
-        if (selectedIds.contains(id)) {
+      /*  if (selectedIds.contains(id)) {
             selectedIds.remove(id)
         } else {
             selectedIds.add(id)
@@ -234,6 +225,31 @@ class RecyclerImageAdapter constructor(
         if (selectedIds.isEmpty()) {
             isSelectionMode = false
             onSelectionModeChanged(false)
+        }*/
+        val wasSelectionMode = isSelectionMode
+
+        if (selectedIds.contains(id)) {
+            selectedIds.remove(id)
+        } else {
+            selectedIds.add(id)
+            isSelectionMode = true
+        }
+
+        val nowSelectionMode = selectedIds.isNotEmpty()
+
+        // Update the selection mode flag based on the current state
+        isSelectionMode = nowSelectionMode
+
+        // 1. If selection mode is entering OR exiting, we must redraw ALL visible items
+        //    to correctly show/hide all checkboxes.
+        if (wasSelectionMode != nowSelectionMode) {
+            onSelectionModeChanged(nowSelectionMode)
+            notifyDataSetChanged() // <-- Re-bind ALL visible items
+        } else {
+            // 2. If we are staying IN selection mode (selectedIds was not empty, and is still not empty),
+            //    we don't need to redraw everything, as the checkbox state for the clicked item
+            //    is handled immediately in the click listener (from Step 1).
+            onSelectionModeChanged(nowSelectionMode)
         }
     }
 
@@ -246,12 +262,7 @@ class RecyclerImageAdapter constructor(
             // Register the card view for context menu
             getActivity.registerForContextMenu(cardview)
 
-            // Set up context menu creation
-            /*cardview.setOnCreateContextMenuListener { menu, _, menuInfo ->
-                menu.setHeaderTitle("Choose")
-                getActivity.menuInflater.inflate(R.menu.wallpaper_context_menu, menu)
 
-            }*/
         }
     }
 

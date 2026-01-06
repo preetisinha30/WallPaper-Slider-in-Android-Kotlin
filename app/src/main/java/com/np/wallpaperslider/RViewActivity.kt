@@ -34,6 +34,7 @@ import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import androidx.constraintlayout.helper.widget.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.FileOutputStream
@@ -54,7 +55,7 @@ class RViewActivity:ComponentActivity(), View.OnClickListener {
     var index :Long = 0L
     var imagesList = ArrayList<ImageItem>()
     var ct:Int = 1
-    lateinit var lvafterrotate : LinearLayout
+    lateinit var lvafterrotate : Flow
     lateinit var filename : String
     lateinit var rotated : Bitmap
     private var homeImages = mutableListOf<String>()
@@ -81,7 +82,7 @@ class RViewActivity:ComponentActivity(), View.OnClickListener {
         if (modalItems.isEmpty()) {
             // If "data" is missing, we cannot load an image.
             Toast.makeText(this, "Error: Image URI is missing.", Toast.LENGTH_LONG).show()
-            Log.e("RViewActivity", "FATAL: modalItems (image URI) is empty.")
+            AppLogger.e("RViewActivity", "FATAL: modalItems (image URI) is empty.")
 
             // Return or finish the activity immediately to prevent a crash
             finish()
@@ -110,7 +111,7 @@ class RViewActivity:ComponentActivity(), View.OnClickListener {
         discard_image.setOnClickListener(this)
         cat_image = findViewById(R.id.view_category_indicator)
         category = intent.getStringExtra("cat") ?: "clear"
-        Log.d("RViewActivity", "category = $category")
+        AppLogger.d("RViewActivity", "category = $category")
         updateCategoryIndicator(category)
         lifecycleScope.launch {
             loadImageListFromPrefs()
@@ -139,7 +140,7 @@ class RViewActivity:ComponentActivity(), View.OnClickListener {
         val setHomeItem = menu.findItem(R.id.action_viewset_home)
         val setLockItem = menu.findItem(R.id.action_viewset_lock)
         if (setHomeItem == null || setLockItem == null) {
-            Log.e("RViewActivity", "Menu item IDs not found in view_context_menu.xml")
+            AppLogger.e("RViewActivity", "Menu item IDs not found in view_context_menu.xml")
             return
         }
         if (currentCategory == "home" || currentCategory == "both") {
@@ -318,7 +319,7 @@ class RViewActivity:ComponentActivity(), View.OnClickListener {
             //val oldUri = array[index!!].toUri()
             val imageItem = imagesList.find { it.id == index } ?: return
             val oldUri = imageItem.imagePath.toUri()
-            Log.d("RViewActivity", "index $index")
+            AppLogger.d("RViewActivity", "index $index")
 
             val success = saveRotatedImage(applicationContext, oldUri)
 
@@ -368,7 +369,7 @@ class RViewActivity:ComponentActivity(), View.OnClickListener {
         val prefs = getSharedPreferences("glide_cache_busters", Context.MODE_PRIVATE)
         val currentBuster = prefs.getInt(uriString, 0)
         prefs.edit().putInt(uriString, currentBuster + 1).apply()
-        Log.d("RViewActivity", "Busted cache for $uriString. New buster: ${currentBuster + 1}")
+        AppLogger.d("RViewActivity", "Busted cache for $uriString. New buster: ${currentBuster + 1}")
     }
     enum class RotateDegrees(val value: Int) {
         ROTATE_90D(90),
@@ -434,7 +435,7 @@ class RViewActivity:ComponentActivity(), View.OnClickListener {
             lockImages = loadImageList("lockImages").toMutableList()
             bothImages = loadImageList("bothImages").toMutableList()
             clearImages = loadImageList("clearImages").toMutableList()
-            Log.d(
+            AppLogger.d(
                 "RGrid",
                 "Loaded lists in RViewActivity: home=${homeImages.size}, lock=${lockImages.size}, both=${bothImages.size}, clear=${clearImages.size}"
             )
@@ -446,7 +447,7 @@ class RViewActivity:ComponentActivity(), View.OnClickListener {
         return withContext(Dispatchers.IO) {
             val prefs = getSharedPreferences("wallpaperimages", Context.MODE_PRIVATE)
             val size = prefs.getInt("${arrayName}_size", 0)
-            Log.d("RGrid", "Loading $arrayName, size: $size")
+            AppLogger.d("RGrid", "Loading $arrayName, size: $size")
             val images = mutableListOf<String>()
             for (index in 0 until size) {
                 prefs.getString("${arrayName}_$index", null)?.let { path ->
@@ -455,9 +456,9 @@ class RViewActivity:ComponentActivity(), View.OnClickListener {
                             // Validate URI accessibility
                             contentResolver.openInputStream(Uri.parse(path))?.close()
                             images.add(path)
-                            Log.d("RGrid", "Valid URI for $arrayName[$index]: $path")
+                            AppLogger.d("RGrid", "Valid URI for $arrayName[$index]: $path")
                         } catch (e: Exception) {
-                            Log.w("RGrid", "Invalid URI for $arrayName[$index]: $path, error: ${e.message}")
+                            AppLogger.w("RGrid", "Invalid URI for $arrayName[$index]: $path, error: ${e.message}")
                             // Remove invalid entry
                             val editor = prefs.edit()
                             editor.remove("${arrayName}_$index")
