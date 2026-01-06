@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@null">
+
+    <TextView
+        android:id="@+id/text_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="32dp"
+        android:layout_marginTop="32dp"
+        android:layout_marginEnd="32dp"
+        android:gravity="center"
+        android:text="Getting Started"
+        android:textColor="@android:color/white"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_chainStyle="packed"/>
+    <!-- Frame containing rounded image -->
+    <FrameLayout
+        android:id="@+id/image_container"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="24dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginBottom="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintVertical_chainStyle="packed"
+        app:layout_constraintTop_toBottomOf="@id/text_title">
+
+        <ImageView
+            android:id="@+id/image_onboarding"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/rounded_corners_bg"
+            android:clipToOutline="true"
+            android:contentDescription="Onboarding feature screenshot"
+            android:outlineProvider="background"
+            android:adjustViewBounds="true"
+            android:scaleType="fitCenter" />
+    </FrameLayout>
+
+    <!--<View
+        android:id="@+id/image_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/overlay_gradient" />-->
+
+
+    <!--<TextView
+        android:id="@+id/text_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Wallpaper Slider"
+        android:textSize="28sp"
+        android:textColor="@color/white"
+        android:fontFamily="sans-serif-medium"
+        android:layout_marginBottom="8dp"
+        app:layout_constraintBottom_toTopOf="@id/text_description"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:background="@null"/>-->
+
+    <!-- Subtitle TextView -->
+    <!--<TextView
+        android:id="@+id/text_description"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/white"
+        android:text="Wallpaper Slideraaaaaaaaaaaaaaa"
+        android:background="@drawable/tooltip_bg"
+        android:textSize="12sp"
+        android:fontFamily="sans-serif"
+        android:layout_marginBottom="80dp"
+        android:layout_marginStart="20px"
+        android:layout_marginEnd="20px"
+        app:layout_constraintBottom_toTopOf="@id/onboardingbutton_container"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>-->
+    <!--<LinearLayout
+        android:id="@+id/onboardingbutton_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end"
+        android:padding="16dp"
+        android:elevation="4dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_next"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:text="Next"
+            android:textSize="14sp"
+            android:padding="12dp"
+            android:contentDescription="Next image"
+            app:icon="@drawable/next_icon"
+            app:iconGravity="start"
+            app:iconPadding="8dp"
+            app:cornerRadius="8dp"
+            app:backgroundTint="@color/purple_100"
+            style="@style/Widget.Material3.Button.ElevatedButton" />
+
+
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_skip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Skip"
+            android:textSize="14sp"
+            android:padding="12dp"
+            android:contentDescription="Skip to Main"
+            app:icon="@drawable/skip"
+            app:iconGravity="start"
+            app:iconPadding="8dp"
+            app:cornerRadius="8dp"
+            app:backgroundTint="@color/purple_100"
+            style="@style/Widget.Material3.Button.ElevatedButton" />
+
+    </LinearLayout>-->
+
+</androidx.constraintlayout.widget.ConstraintLayout>

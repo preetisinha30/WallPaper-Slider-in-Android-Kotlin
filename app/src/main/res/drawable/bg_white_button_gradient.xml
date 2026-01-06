@@ -1,0 +1,28 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Outer glow -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="14dp"/>
+            <gradient
+                android:type="radial"
+                android:startColor="#FFFFFF"
+                android:endColor="#A2AAE0"
+                android:gradientRadius="200dp"/>
+        </shape>
+    </item>
+
+    <!-- Inner surface -->
+    <item
+        android:left="3dp"
+        android:top="3dp"
+        android:right="3dp"
+        android:bottom="3dp">
+
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp"/>
+            <solid android:color="#FFFFFF"/>
+        </shape>
+    </item>
+
+</layer-list>

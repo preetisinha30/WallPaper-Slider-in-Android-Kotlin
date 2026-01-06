@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Wallpaper Slider</string>
+    <string name="select_image">"Crop Image"</string>
+    <string name="desc_select_crop">"Select image to crop area"</string>
+    <string name="desc_zoom_in">"Zoom in on image to enlarge crop area"</string>
+    <string name="desc_zoom_out">"Zoom out to reduce crop image area"</string>
+    <string name="desc_rotate">"Rotate image clockwise"</string>
+    <string name="save_image">"Save Image"</string>
+    <string name="desc_save_image">"Save the cropped image"</string>
+    <string name="desc_select_crop_area">"Select area for cropping image"</string>
+    <string name="desc_cropped_preview">"Preview of cropped image"</string>
+    <string name="desc_undo">Undo transformations</string>
+    <string name="cancel">Cancel</string>
+    <string name="desc_cancel">Cancel cropping</string>
+    <string name="desc_crop_image">Crop image</string>
+</resources>

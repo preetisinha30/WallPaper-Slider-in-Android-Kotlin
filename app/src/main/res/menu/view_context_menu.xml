@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/action_viewset_home"
+        android:title="Add to Homescreen" />
+    <item
+        android:id="@+id/action_viewset_lock"
+        android:title="Add to Lockscreen" />
+    <!--<item
+        android:id="@+id/action_viewset_both"
+        android:title="Set on Bothscreens" />
+    <item
+        android:id="@+id/action_viewset_clear"
+        android:title="Clear" />-->
+</menu>

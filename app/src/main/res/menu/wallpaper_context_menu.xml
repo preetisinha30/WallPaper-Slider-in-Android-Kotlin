@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/action_set_home"
+        android:title="Add to Homescreen" />
+    <item
+        android:id="@+id/action_set_lock"
+        android:title="Add to Lockscreen" />
+    <!--<item
+        android:id="@+id/action_set_both"
+        android:title="Set on Bothscreens" />-->
+    <!--<item
+        android:id="@+id/action_set_clear"
+        android:title="Clear" />-->
+    <!--<item
+        android:id="@+id/action_view"
+        android:title="View Image" />-->
+    <item
+        android:id="@+id/action_delete"
+        android:title="Delete Image" />
+</menu>

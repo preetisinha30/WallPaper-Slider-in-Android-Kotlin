@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_all"
+        android:title="All"
+        android:icon="@drawable/all_images" />
+    <item
+        android:id="@+id/nav_home"
+        android:title="Home"
+        android:icon="@drawable/homeimage" />
+    <item
+        android:id="@+id/nav_lock"
+        android:title="Lock"
+        android:icon="@drawable/lockimage" />
+    <!--<item
+        android:id="@+id/nav_both"
+        android:title="Both"
+        android:icon="@drawable/bothimage" />-->
+</menu>
